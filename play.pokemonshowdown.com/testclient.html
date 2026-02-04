@@ -20,6 +20,7 @@
 				document.head.appendChild(scriptEl);
 			}
 			Config.testclient = true;
+			Config.loginServerProxy = '/api/loginserver';
 			(function() {
 				if (location.search !== '') {
 					var m = /\?~~(([^:\/]*)(:[0-9]*)?)/.exec(location.search);
