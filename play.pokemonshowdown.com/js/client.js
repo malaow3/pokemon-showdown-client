@@ -217,9 +217,14 @@ function toId() {
 		 * domain in order to have access to the correct cookies.
 		 */
 		getActionPHP: function () {
-			var ret = '/~~' + Config.server.id + '/action.php';
-			if (Config.testclient) {
-				ret = 'https://' + Config.routes.client + ret;
+			var ret;
+			if (Config.loginServerProxy) {
+				ret = Config.loginServerProxy + '?serverid=' + encodeURIComponent(Config.server.id);
+			} else {
+				ret = '/~~' + Config.server.id + '/action.php';
+				if (Config.testclient) {
+					ret = 'https://' + Config.routes.client + ret;
+				}
 			}
 			return (this.getActionPHP = function () {
 				return ret;

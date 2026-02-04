@@ -246,6 +246,13 @@ export class PSStorage {
 
 		window.addEventListener('message', this.onMessage);
 
+		// Skip cross-origin iframe when using a login server proxy
+		if (Config.loginServerProxy) {
+			Config.server ||= Config.defaultserver;
+			this.loaded = true;
+			return Promise.resolve();
+		}
+
 		if (document.location.hostname !== Config.routes.client) {
 			const iframe = document.createElement('iframe');
 			iframe.src = 'https://' + Config.routes.client + '/crossdomain.php?host=' +
@@ -398,14 +405,24 @@ export const PSLoginServer = new class {
 		// 	return Promise.resolve(null);
 		// }
 		data.act = act;
-		let url = '/~~' + PS.server.id + '/action.php';
-		if (location.pathname.endsWith('.html')) {
-			url = 'https://' + Config.routes.client + url;
-			if (typeof POKEMON_SHOWDOWN_TESTCLIENT_KEY === 'string') {
-				data.sid = POKEMON_SHOWDOWN_TESTCLIENT_KEY.replace(/%2C/g, ',');
+		let url: string;
+		if (Config.loginServerProxy) {
+			// Use custom proxy for login server requests (avoids CORS issues on third-party hosts)
+			// Use location.origin to avoid Net.defaultRoute prepending the wrong domain
+			const proxyBase = Config.loginServerProxy.startsWith('/') ? location.origin + Config.loginServerProxy : Config.loginServerProxy;
+			url = proxyBase + '?serverid=' + encodeURIComponent(PS.server.id);
+		} else {
+			url = '/~~' + PS.server.id + '/action.php';
+			if (location.pathname.endsWith('.html')) {
+				url = 'https://' + Config.routes.client + url;
+				if (typeof POKEMON_SHOWDOWN_TESTCLIENT_KEY === 'string') {
+					data.sid = POKEMON_SHOWDOWN_TESTCLIENT_KEY.replace(/%2C/g, ',');
+				}
 			}
 		}
-		return PSStorage.request('POST', url, data) || Net(url).get({ method: 'POST', body: data }).then(
+		// Skip PSStorage cross-origin iframe when using a proxy
+		const useProxy = !!Config.loginServerProxy;
+		return (!useProxy && PSStorage.request('POST', url, data)) || Net(url).get({ method: 'POST', body: data }).then(
 			res => res ?? null
 		).catch(
 			() => null

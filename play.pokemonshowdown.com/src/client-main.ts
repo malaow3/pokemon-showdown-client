@@ -52,6 +52,8 @@ export interface PSConfig {
 	customcolors: Record<string, string>;
 	whitelist?: string[];
 	testclient?: boolean;
+	/** URL to a login server proxy (for third-party hosted clients to avoid CORS issues) */
+	loginServerProxy?: string;
 }
 export declare const Config: PSConfig;
 
