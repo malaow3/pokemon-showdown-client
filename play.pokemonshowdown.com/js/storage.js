@@ -509,6 +509,13 @@ Storage.initTestClient = function () {
 	Config.server = Config.server || Config.defaultserver;
 	Storage.whenTeamsLoaded.load();
 
+	// When a login server proxy is configured, requests go to a same-origin
+	// endpoint that forwards cookies for us, so no sid or manual copy-paste needed.
+	if (Config.loginServerProxy) {
+		Storage.whenPrefsLoaded.load();
+		return;
+	}
+
 	var sid = null;
 	if (typeof POKEMON_SHOWDOWN_TESTCLIENT_KEY === 'string') {
 		sid = POKEMON_SHOWDOWN_TESTCLIENT_KEY.replace(/\%2C/g, ',');

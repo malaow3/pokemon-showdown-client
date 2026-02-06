@@ -186,7 +186,7 @@ class PSPrefs extends PSStreamModel<string | null> {
 				this.storageEngine = 'localStorage';
 				this.load(JSON.parse(localStorage.getItem('showdown_prefs')!) || {}, true);
 			}
-		} catch {}
+		} catch { }
 	}
 	/**
 	 * Change a preference.
@@ -216,8 +216,8 @@ class PSPrefs extends PSStreamModel<string | null> {
 	}
 	save() {
 		switch (this.storageEngine) {
-		case 'localStorage':
-			localStorage.setItem('showdown_prefs', JSON.stringify(this.storage));
+			case 'localStorage':
+				localStorage.setItem('showdown_prefs', JSON.stringify(this.storage));
 		}
 	}
 	fixPrefs(newPrefs: any) {
@@ -373,7 +373,7 @@ class PSTeams extends PSStreamModel<'team' | 'format'> {
 		super();
 		try {
 			this.unpackAll(localStorage.getItem('showdown_teams'));
-		} catch {}
+		} catch { }
 	}
 	teambuilderFormat(format: string): ID {
 		const ruleSepIndex = format.indexOf('@@@');
@@ -457,7 +457,7 @@ class PSTeams extends PSStreamModel<'team' | 'format'> {
 	save() {
 		try {
 			localStorage.setItem('showdown_teams', this.packAll(this.list));
-		} catch {}
+		} catch { }
 		this.update('team');
 	}
 	unpackLine(line: string): Team | null {
@@ -710,7 +710,7 @@ class PSUser extends PSStreamModel<PSLoginState | null> {
 					try {
 						// @ts-expect-error gapi included dynamically
 						gapi.auth2.getAuthInstance().signOut();
-					} catch {}
+					} catch { }
 				}
 				this.updateLogin({
 					name,
@@ -1045,7 +1045,7 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 						setTimeout(() => { desktopNotification?.close(); }, 5000);
 					}
 				}
-			} catch {}
+			} catch { }
 		}
 		if (options.noAutoDismiss && !options.id) {
 			throw new Error(`Must specify id for manual dismissing`);
@@ -1073,7 +1073,7 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 	dismissNotificationAt(i: number) {
 		try {
 			this.notifications[i].notification?.close();
-		} catch {}
+		} catch { }
 		this.notifications.splice(i, 1);
 	}
 	dismissNotification(id: string) {
@@ -1108,34 +1108,34 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 	 * called, and you can return true to stop that behavior. You could also
 	 * prep for a bunch of `receiveLine`s and then not return anything.
 	 */
-	handleReconnect(msg: string): boolean | void {}
+	handleReconnect(msg: string): boolean | void { }
 	receiveLine(args: Args): void {
 		switch (args[0]) {
-		case 'title': {
-			this.title = args[1];
-			PS.update();
-			break;
-		} case 'notify': {
-			const [, title, body, toHighlight] = args;
-			if (toHighlight && !ChatRoom.getHighlight(toHighlight, this.id)) break;
-			this.notify({ title, body });
-			break;
-		} case 'tempnotify': {
-			const [, id, title, body, toHighlight] = args;
-			if (toHighlight && !ChatRoom.getHighlight(toHighlight, this.id)) break;
-			this.notify({ title, body, id });
-			break;
-		} case 'tempnotifyoff': {
-			const [, id] = args;
-			this.dismissNotification(id);
-			break;
-		} default: {
-			if (this.canConnect) {
-				this.update(args);
-			} else {
-				throw new Error(`This room is not designed to receive messages`);
+			case 'title': {
+				this.title = args[1];
+				PS.update();
+				break;
+			} case 'notify': {
+				const [, title, body, toHighlight] = args;
+				if (toHighlight && !ChatRoom.getHighlight(toHighlight, this.id)) break;
+				this.notify({ title, body });
+				break;
+			} case 'tempnotify': {
+				const [, id, title, body, toHighlight] = args;
+				if (toHighlight && !ChatRoom.getHighlight(toHighlight, this.id)) break;
+				this.notify({ title, body, id });
+				break;
+			} case 'tempnotifyoff': {
+				const [, id] = args;
+				this.dismissNotification(id);
+				break;
+			} default: {
+				if (this.canConnect) {
+					this.update(args);
+				} else {
+					throw new Error(`This room is not designed to receive messages`);
+				}
 			}
-		}
 		}
 	}
 	/**
@@ -1514,49 +1514,49 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 					targets[i] = targets[i].replace(/\n/g, '').trim();
 				}
 				switch (subCmd) {
-				case 'add': case 'roomadd': {
-					let key = subCmd === 'roomadd' ? (PS.server.id + '#' + this.id) : 'global';
-					let highlightList = highlights[key] || [];
-					for (let i = 0, len = targets.length; i < len; i++) {
-						if (!targets[i]) continue;
-						if (/[\\^$*+?()|{}[\]]/.test(targets[i])) {
-							// Catch any errors thrown by newly added regular expressions so they don't break the entire highlight list
-							try {
-								new RegExp(targets[i]);
-							} catch (e: any) {
-								return this.add(`|error|${(e.message.substr(0, 28) === 'Invalid regular expression: ' ? e.message : 'Invalid regular expression: /' + targets[i] + '/: ' + e.message)}`);
+					case 'add': case 'roomadd': {
+						let key = subCmd === 'roomadd' ? (PS.server.id + '#' + this.id) : 'global';
+						let highlightList = highlights[key] || [];
+						for (let i = 0, len = targets.length; i < len; i++) {
+							if (!targets[i]) continue;
+							if (/[\\^$*+?()|{}[\]]/.test(targets[i])) {
+								// Catch any errors thrown by newly added regular expressions so they don't break the entire highlight list
+								try {
+									new RegExp(targets[i]);
+								} catch (e: any) {
+									return this.add(`|error|${(e.message.substr(0, 28) === 'Invalid regular expression: ' ? e.message : 'Invalid regular expression: /' + targets[i] + '/: ' + e.message)}`);
+								}
+							}
+							if (highlightList.includes(targets[i])) {
+								return this.add(`|error|${targets[i]} is already on your highlights list.`);
 							}
 						}
-						if (highlightList.includes(targets[i])) {
-							return this.add(`|error|${targets[i]} is already on your highlights list.`);
-						}
+						highlights[key] = highlightList.concat(targets);
+						this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
+						// We update the regex
+						ChatRoom.updateHighlightRegExp(highlights);
+						break;
 					}
-					highlights[key] = highlightList.concat(targets);
-					this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
-					// We update the regex
-					ChatRoom.updateHighlightRegExp(highlights);
-					break;
-				}
-				case 'delete': case 'roomdelete': {
-					let key = subCmd === 'roomdelete' ? (PS.server.id + '#' + this.id) : 'global';
-					let highlightList = highlights[key] || [];
-					let newHls: string[] = [];
-					for (let i = 0, len = highlightList.length; i < len; i++) {
-						if (!targets.includes(highlightList[i])) {
-							newHls.push(highlightList[i]);
+					case 'delete': case 'roomdelete': {
+						let key = subCmd === 'roomdelete' ? (PS.server.id + '#' + this.id) : 'global';
+						let highlightList = highlights[key] || [];
+						let newHls: string[] = [];
+						for (let i = 0, len = highlightList.length; i < len; i++) {
+							if (!targets.includes(highlightList[i])) {
+								newHls.push(highlightList[i]);
+							}
 						}
+						highlights[key] = newHls;
+						this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
+						// We update the regex
+						ChatRoom.updateHighlightRegExp(highlights);
+						break;
 					}
-					highlights[key] = newHls;
-					this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
-					// We update the regex
-					ChatRoom.updateHighlightRegExp(highlights);
-					break;
-				}
-				default:
-					// Wrong command
-					this.errorReply('Invalid /highlight command.');
-					this.handleSend('/help highlight'); // show help
-					return;
+					default:
+						// Wrong command
+						this.errorReply('Invalid /highlight command.');
+						this.handleSend('/help highlight'); // show help
+						return;
 				}
 				PS.prefs.set('highlights', highlights);
 			} else {
@@ -1591,109 +1591,109 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 		},
 		'h,help'(target) {
 			switch (toID(target)) {
-			case 'chal':
-			case 'chall':
-			case 'challenge':
-				this.add('||/challenge - Open a prompt to challenge a user to a battle.');
-				this.add('||/challenge [user] - Challenge the user [user] to a battle.');
-				this.add('||/challenge [user], [format] - Challenge the user [user] to a battle in the specified [format].');
-				this.add('||/challenge [user], [format] @@@ [rules] - Challenge the user [user] to a battle with custom rules.');
-				this.add('||[rules] can be a comma-separated list of: [added rule], ![removed rule], -[banned thing], *[restricted thing], +[unbanned/unrestricted thing]');
-				this.add('||/battlerules - Detailed information on what can go in [rules].');
-				return;
-			case 'accept':
-				this.add('||/accept - Accept a challenge if only one is pending.');
-				this.add('||/accept [user] - Accept a challenge from the specified user.');
-				return;
-			case 'reject':
-				this.add('||/reject - Reject a challenge if only one is pending.');
-				this.add('||/reject [user] - Reject a challenge from the specified user.');
-				return;
-			case 'user':
-			case 'open':
-				this.add('||/user [user] - Open a popup containing the user [user]\'s avatar, name, rank, and chatroom list.');
-				return;
-			case 'news':
-				this.add('||/news - Opens a popup containing the news.');
-				return;
-			case 'ignore':
-			case 'unignore':
-				this.add('||/ignore [user] - Ignore all messages from the user [user].');
-				this.add('||/unignore [user] - Remove the user [user] from your ignore list.');
-				this.add('||/ignorelist - List all the users that you currently ignore.');
-				this.add('||/clearignore - Remove all users on your ignore list.');
-				this.add('||Note that staff messages cannot be ignored.');
-				return;
-			case 'nick':
-				this.add('||/nick [new username] - Change your username.');
-				return;
-			case 'clear':
-				this.add('||/clear - Clear the room\'s chat log.');
-				return;
-			case 'showdebug':
-			case 'hidedebug':
-				this.add('||/showdebug - Receive debug messages from battle events.');
-				this.add('||/hidedebug - Ignore debug messages from battle events.');
-				return;
-			case 'showjoins':
-			case 'hidejoins':
-				this.add('||/showjoins [room] - Receive users\' join/leave messages. Optionally for only specified room.');
-				this.add('||/hidejoins [room] - Ignore users\' join/leave messages. Optionally for only specified room.');
-				return;
-			case 'showbattles':
-			case 'hidebattles':
-				this.add('||/showbattles - Receive links to new battles in Lobby.');
-				this.add('||/hidebattles - Ignore links to new battles in Lobby.');
-				return;
-			case 'ffto':
-			case 'fastforwardto':
-				this.add('||/ffto [turn] - Skip to turn [turn] in the current battle.');
-				this.add('||/ffto +[turn] - Skip forward [turn] turns.');
-				this.add('||/ffto -[turn] - Skip backward [turn] turns.');
-				this.add('||/ffto 0 - Skip to the start of the battle.');
-				this.add('||/ffto end - Skip to the end of the battle.');
-				return;
-			case 'unpackhidden':
-			case 'packhidden':
-				this.add('||/unpackhidden - Suppress hiding locked or banned users\' chat messages after the fact.');
-				this.add('||/packhidden - Hide locked or banned users\' chat messages after the fact.');
-				this.add('||Hidden messages from a user can be restored by clicking the button underneath their lock/ban reason.');
-				return;
-			case 'timestamps':
-				this.add('||Set your timestamps preference:');
-				this.add('||/timestamps [all|lobby|pms], [minutes|seconds|off]');
-				this.add('||all - Change all timestamps preferences, lobby - Change only lobby chat preferences, pms - Change only PM preferences.');
-				this.add('||off - Set timestamps off, minutes - Show timestamps of the form [hh:mm], seconds - Show timestamps of the form [hh:mm:ss].');
-				return;
-			case 'highlight':
-			case 'hl':
-				this.add('||Set up highlights:');
-				this.add('||/highlight add [word 1], [word 2], [...] - Add the provided list of words to your highlight list.');
-				this.add('||/highlight roomadd [word 1], [word 2], [...] - Add the provided list of words to the highlight list of whichever room you used the command in.');
-				this.add('||/highlight list - List all words that currently highlight you.');
-				this.add('||/highlight roomlist - List all words that currently highlight you in whichever room you used the command in.');
-				this.add('||/highlight delete [word 1], [word 2], [...] - Delete the provided list of words from your entire highlight list.');
-				this.add('||/highlight roomdelete [word 1], [word 2], [...] - Delete the provided list of words from the highlight list of whichever room you used the command in.');
-				this.add('||/highlight clear - Clear your global highlight list.');
-				this.add('||/highlight roomclear - Clear the highlight list of whichever room you used the command in.');
-				this.add('||/highlight clearall - Clear your entire highlight list (all rooms and globally).');
-				return;
-			case 'rank':
-			case 'ranking':
-			case 'rating':
-			case 'ladder':
-				this.add('||/rating - Get your own rating.');
-				this.add('||/rating [username] - Get user [username]\'s rating.');
-				return;
-			case 'afd':
-				this.add('||/afd full - Enable all April Fools\' Day jokes.');
-				this.add('||/afd sprites - Enable April Fools\' Day sprites.');
-				this.add('||/afd default - Set April Fools\' Day to default (full on April 1st, off otherwise).');
-				this.add('||/afd off - Disable April Fools\' Day jokes until the next refresh, and set /afd default.');
-				this.add('||/afd never - Disable April Fools\' Day jokes permanently.');
-				return;
-			default:
-				return true;
+				case 'chal':
+				case 'chall':
+				case 'challenge':
+					this.add('||/challenge - Open a prompt to challenge a user to a battle.');
+					this.add('||/challenge [user] - Challenge the user [user] to a battle.');
+					this.add('||/challenge [user], [format] - Challenge the user [user] to a battle in the specified [format].');
+					this.add('||/challenge [user], [format] @@@ [rules] - Challenge the user [user] to a battle with custom rules.');
+					this.add('||[rules] can be a comma-separated list of: [added rule], ![removed rule], -[banned thing], *[restricted thing], +[unbanned/unrestricted thing]');
+					this.add('||/battlerules - Detailed information on what can go in [rules].');
+					return;
+				case 'accept':
+					this.add('||/accept - Accept a challenge if only one is pending.');
+					this.add('||/accept [user] - Accept a challenge from the specified user.');
+					return;
+				case 'reject':
+					this.add('||/reject - Reject a challenge if only one is pending.');
+					this.add('||/reject [user] - Reject a challenge from the specified user.');
+					return;
+				case 'user':
+				case 'open':
+					this.add('||/user [user] - Open a popup containing the user [user]\'s avatar, name, rank, and chatroom list.');
+					return;
+				case 'news':
+					this.add('||/news - Opens a popup containing the news.');
+					return;
+				case 'ignore':
+				case 'unignore':
+					this.add('||/ignore [user] - Ignore all messages from the user [user].');
+					this.add('||/unignore [user] - Remove the user [user] from your ignore list.');
+					this.add('||/ignorelist - List all the users that you currently ignore.');
+					this.add('||/clearignore - Remove all users on your ignore list.');
+					this.add('||Note that staff messages cannot be ignored.');
+					return;
+				case 'nick':
+					this.add('||/nick [new username] - Change your username.');
+					return;
+				case 'clear':
+					this.add('||/clear - Clear the room\'s chat log.');
+					return;
+				case 'showdebug':
+				case 'hidedebug':
+					this.add('||/showdebug - Receive debug messages from battle events.');
+					this.add('||/hidedebug - Ignore debug messages from battle events.');
+					return;
+				case 'showjoins':
+				case 'hidejoins':
+					this.add('||/showjoins [room] - Receive users\' join/leave messages. Optionally for only specified room.');
+					this.add('||/hidejoins [room] - Ignore users\' join/leave messages. Optionally for only specified room.');
+					return;
+				case 'showbattles':
+				case 'hidebattles':
+					this.add('||/showbattles - Receive links to new battles in Lobby.');
+					this.add('||/hidebattles - Ignore links to new battles in Lobby.');
+					return;
+				case 'ffto':
+				case 'fastforwardto':
+					this.add('||/ffto [turn] - Skip to turn [turn] in the current battle.');
+					this.add('||/ffto +[turn] - Skip forward [turn] turns.');
+					this.add('||/ffto -[turn] - Skip backward [turn] turns.');
+					this.add('||/ffto 0 - Skip to the start of the battle.');
+					this.add('||/ffto end - Skip to the end of the battle.');
+					return;
+				case 'unpackhidden':
+				case 'packhidden':
+					this.add('||/unpackhidden - Suppress hiding locked or banned users\' chat messages after the fact.');
+					this.add('||/packhidden - Hide locked or banned users\' chat messages after the fact.');
+					this.add('||Hidden messages from a user can be restored by clicking the button underneath their lock/ban reason.');
+					return;
+				case 'timestamps':
+					this.add('||Set your timestamps preference:');
+					this.add('||/timestamps [all|lobby|pms], [minutes|seconds|off]');
+					this.add('||all - Change all timestamps preferences, lobby - Change only lobby chat preferences, pms - Change only PM preferences.');
+					this.add('||off - Set timestamps off, minutes - Show timestamps of the form [hh:mm], seconds - Show timestamps of the form [hh:mm:ss].');
+					return;
+				case 'highlight':
+				case 'hl':
+					this.add('||Set up highlights:');
+					this.add('||/highlight add [word 1], [word 2], [...] - Add the provided list of words to your highlight list.');
+					this.add('||/highlight roomadd [word 1], [word 2], [...] - Add the provided list of words to the highlight list of whichever room you used the command in.');
+					this.add('||/highlight list - List all words that currently highlight you.');
+					this.add('||/highlight roomlist - List all words that currently highlight you in whichever room you used the command in.');
+					this.add('||/highlight delete [word 1], [word 2], [...] - Delete the provided list of words from your entire highlight list.');
+					this.add('||/highlight roomdelete [word 1], [word 2], [...] - Delete the provided list of words from the highlight list of whichever room you used the command in.');
+					this.add('||/highlight clear - Clear your global highlight list.');
+					this.add('||/highlight roomclear - Clear the highlight list of whichever room you used the command in.');
+					this.add('||/highlight clearall - Clear your entire highlight list (all rooms and globally).');
+					return;
+				case 'rank':
+				case 'ranking':
+				case 'rating':
+				case 'ladder':
+					this.add('||/rating - Get your own rating.');
+					this.add('||/rating [username] - Get user [username]\'s rating.');
+					return;
+				case 'afd':
+					this.add('||/afd full - Enable all April Fools\' Day jokes.');
+					this.add('||/afd sprites - Enable April Fools\' Day sprites.');
+					this.add('||/afd default - Set April Fools\' Day to default (full on April 1st, off otherwise).');
+					this.add('||/afd off - Disable April Fools\' Day jokes until the next refresh, and set /afd default.');
+					this.add('||/afd never - Disable April Fools\' Day jokes permanently.');
+					return;
+				default:
+					return true;
 			}
 		},
 		'autojoin,cmd,crq,query'() {
@@ -1921,8 +1921,8 @@ export const PS = new class extends PSModel {
 	 * they are until they're dropped.
 	 */
 	dragging: { type: 'room', roomid: RoomID, foreground?: boolean } |
-		{ type: 'team', team: Team | number, folder: string | null } |
-		{ type: '?' } | // browser preventing us from knowing what's being dragged
+	{ type: 'team', team: Team | number, folder: string | null } |
+	{ type: '?' } | // browser preventing us from knowing what's being dragged
 		null = null;
 	lastMessageTime = '';
 
@@ -2000,33 +2000,33 @@ export const PS = new class extends PSModel {
 	 */
 	getWidthFor(room: PSRoom) {
 		switch (room.type) {
-		case 'mainmenu':
-			return {
-				minWidth: 340,
-				width: 628,
-				maxWidth: 628,
-				isMainMenu: true,
-			};
-		case 'chat':
-		case 'rooms':
-		case 'battles':
-			return {
-				minWidth: 320,
-				width: 570,
-				maxWidth: 640,
-			};
-		case 'team':
-			return {
-				minWidth: 660,
-				width: 660,
-				maxWidth: 660,
-			};
-		case 'battle':
-			return {
-				minWidth: 320,
-				width: 956,
-				maxWidth: 1180,
-			};
+			case 'mainmenu':
+				return {
+					minWidth: 340,
+					width: 628,
+					maxWidth: 628,
+					isMainMenu: true,
+				};
+			case 'chat':
+			case 'rooms':
+			case 'battles':
+				return {
+					minWidth: 320,
+					width: 570,
+					maxWidth: 640,
+				};
+			case 'team':
+				return {
+					minWidth: 660,
+					width: 660,
+					maxWidth: 660,
+				};
+			case 'battle':
+				return {
+					minWidth: 320,
+					width: 956,
+					maxWidth: 1180,
+				};
 		}
 		return {
 			minWidth: 640,
@@ -2111,65 +2111,65 @@ export const PS = new class extends PSModel {
 		for (const line of msg.split('\n')) {
 			const args = BattleTextParser.parseLine(line);
 			switch (args[0]) {
-			case 'init': {
-				isInit = true;
-				room = PS.rooms[roomid2];
-				const [, type] = args;
-				if (!room) {
-					room = this.addRoom({
-						id: roomid2,
-						type,
-						connected: true,
-						autofocus: roomid !== 'staff' && roomid !== 'upperstaff',
-						// probably the only use for `autoclosePopups: false`.
-						// (the server sometimes sends a popup error message and a new room at the same time)
-						autoclosePopups: false,
-					});
-				} else {
-					room.type = type;
-					this.updateRoomTypes();
-				}
-				if (room) {
-					if (room.connected === 'autoreconnect') {
-						room.connected = true;
-						if (room.handleReconnect(msg)) return;
+				case 'init': {
+					isInit = true;
+					room = PS.rooms[roomid2];
+					const [, type] = args;
+					if (!room) {
+						room = this.addRoom({
+							id: roomid2,
+							type,
+							connected: true,
+							autofocus: roomid !== 'staff' && roomid !== 'upperstaff',
+							// probably the only use for `autoclosePopups: false`.
+							// (the server sometimes sends a popup error message and a new room at the same time)
+							autoclosePopups: false,
+						});
+					} else {
+						room.type = type;
+						this.updateRoomTypes();
 					}
-					room.connected = true;
-				}
-				this.updateAutojoin();
-				this.update();
-				continue;
-			} case 'deinit': {
-				room = PS.rooms[roomid2];
-				if (room && room.connected !== 'expired') {
-					room.connected = false;
-					this.removeRoom(room);
-				}
-				this.updateAutojoin();
-				this.update();
-				continue;
-			} case 'noinit': {
-				room = PS.rooms[roomid2];
-				if (room) {
-					room.connected = false;
-					if (args[1] === 'namerequired') {
-						room.connectWhenLoggedIn = true;
-						if (!PS.user.initializing) {
-							room.receiveLine(['error', args[2]]);
+					if (room) {
+						if (room.connected === 'autoreconnect') {
+							room.connected = true;
+							if (room.handleReconnect(msg)) return;
 						}
-					} else if (args[1] === 'nonexistent') {
-						// sometimes we assume a room is a chatroom when it's not
-						// when that happens, just ignore this error
-						if (room.type === 'chat' || room.type === 'battle') room.receiveLine(args);
-					} else if (args[1] === 'rename') {
 						room.connected = true;
-						room.title = args[3] || room.title;
-						this.renameRoom(room, args[2] as RoomID);
 					}
+					this.updateAutojoin();
+					this.update();
+					continue;
+				} case 'deinit': {
+					room = PS.rooms[roomid2];
+					if (room && room.connected !== 'expired') {
+						room.connected = false;
+						this.removeRoom(room);
+					}
+					this.updateAutojoin();
+					this.update();
+					continue;
+				} case 'noinit': {
+					room = PS.rooms[roomid2];
+					if (room) {
+						room.connected = false;
+						if (args[1] === 'namerequired') {
+							room.connectWhenLoggedIn = true;
+							if (!PS.user.initializing) {
+								room.receiveLine(['error', args[2]]);
+							}
+						} else if (args[1] === 'nonexistent') {
+							// sometimes we assume a room is a chatroom when it's not
+							// when that happens, just ignore this error
+							if (room.type === 'chat' || room.type === 'battle') room.receiveLine(args);
+						} else if (args[1] === 'rename') {
+							room.connected = true;
+							room.title = args[3] || room.title;
+							this.renameRoom(room, args[2] as RoomID);
+						}
+					}
+					this.update();
+					continue;
 				}
-				this.update();
-				continue;
-			}
 
 			}
 			room?.receiveLine(args);
@@ -2620,24 +2620,24 @@ export const PS = new class extends PSModel {
 
 		room.location = location;
 		switch (location) {
-		case 'left':
-			this.leftRoomList.splice(Math.max(index ?? Infinity, 1), 0, room.id);
-			break;
-		case 'right':
-			this.rightRoomList.splice(Math.min(index ?? -1, this.rightRoomList.length - 1), 0, room.id);
-			break;
-		case 'mini-window':
-			this.miniRoomList.splice(index ?? 0, 0, room.id);
-			break;
-		case 'popup':
-		case 'semimodal-popup':
-		case 'modal-popup':
-			// moving a room to a popup must move it to the topmost popup
-			this.popups.push(room.id);
-			this.room = room; // popups can't be backgrounded
-			break;
-		default:
-			throw new Error(`Invalid room location: ${location satisfies never as string}`);
+			case 'left':
+				this.leftRoomList.splice(Math.max(index ?? Infinity, 1), 0, room.id);
+				break;
+			case 'right':
+				this.rightRoomList.splice(Math.min(index ?? -1, this.rightRoomList.length - 1), 0, room.id);
+				break;
+			case 'mini-window':
+				this.miniRoomList.splice(index ?? 0, 0, room.id);
+				break;
+			case 'popup':
+			case 'semimodal-popup':
+			case 'modal-popup':
+				// moving a room to a popup must move it to the topmost popup
+				this.popups.push(room.id);
+				this.room = room; // popups can't be backgrounded
+				break;
+			default:
+				throw new Error(`Invalid room location: ${location satisfies never as string}`);
 		}
 		if (!background) {
 			if (location === 'left') this.leftPanel = this.panel = room;
@@ -2780,9 +2780,9 @@ export const PS = new class extends PSModel {
 				// the new Notification spec anyway.
 				window.webkitNotifications.requestPermission();
 			} else if (window.Notification) {
-				Notification.requestPermission?.(permission => {});
+				Notification.requestPermission?.(permission => { });
 			}
-		} catch {}
+		} catch { }
 	}
 	playNotificationSound() {
 		if (window.BattleSound && !this.prefs.mute) {

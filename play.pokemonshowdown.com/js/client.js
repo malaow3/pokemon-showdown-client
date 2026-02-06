@@ -2681,9 +2681,10 @@ function toId() {
 			if (!data || !data.message || typeof data.callback !== "function") return;
 			this.callback = data.callback;
 
+			var inputType = data.type || 'text';
 			var buf = '<form>';
 			buf += '<p><label class="label">' + data.message;
-			buf += '<input class="textbox autofocus" type="text" name="data" value="' + BattleLog.escapeHTML(data.value || '') + '" /></label></p>';
+			buf += '<input class="textbox autofocus" type="' + BattleLog.escapeHTML(inputType) + '" name="data" value="' + BattleLog.escapeHTML(data.value || '') + '" /></label></p>';
 			buf += '<p class="buttonbar"><button type="submit" class="button"><strong>' + data.button + '</strong></button> <button type="button" name="close" class="button">Cancel</button></p>';
 			buf += '</form>';
 

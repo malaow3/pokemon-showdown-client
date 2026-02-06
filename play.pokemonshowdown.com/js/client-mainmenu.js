@@ -1,4 +1,4 @@
-(function ($) {
+(function($) {
 
 	this.MainMenuRoom = this.Room.extend({
 		type: 'mainmenu',
@@ -21,9 +21,13 @@
 			'click .datasearch': 'clickDatasearchResults',
 			'click button.formatselect': 'selectFormat',
 			'click button.teamselect': 'selectTeam',
-			'click button[name=partnersubmit]': 'selectTeammate'
+			'click button[name=partnersubmit]': 'selectTeammate',
+			'click button[name=beta]': 'beta'
 		},
-		initialize: function () {
+		beta: function() {
+			window.location = "/"
+		},
+		initialize: function() {
 			this.$el.addClass('scrollable');
 
 			// left menu 2 (high-res: right, low-res: top)
@@ -61,7 +65,8 @@
 			buf += '<div class="menugroup"><p><button class="button mainmenu4 onlineonly disabled" name="joinRoom" value="battles">Watch a battle</button></p>';
 			buf += '<p><button class="button mainmenu5 onlineonly disabled" name="finduser">Find a user</button></p>';
 			buf += '<p><button class="button mainmenu6 onlineonly disabled" name="send" value="/friends">Friends</button></p>';
-			buf += '<p><button class="button mainmenu7" name="joinRoom" value="resources">Info & Resources</button></p></div>';
+			buf += '<p><button class="button mainmenu7" name="joinRoom" value="resources">Info & Resources</button></p>';
+			buf += '<p><button class="button mainmenu8" name="beta">Swap to Beta client</button></p></div>';
 
 			this.$('.mainmenu').html(buf);
 
@@ -87,7 +92,7 @@
 			// (created during page load)
 
 			var self = this;
-			Storage.whenPrefsLoaded(function () {
+			Storage.whenPrefsLoaded(function() {
 				var newsid = Number(Storage.prefs('newsid'));
 				var $news = this.$('.news-embed');
 				if (!newsid) {
@@ -122,7 +127,7 @@
 			}
 		},
 
-		addPseudoPM: function (options) {
+		addPseudoPM: function(options) {
 			if (!options) return;
 			options.title = options.title || '';
 			options.html = options.html || '';
@@ -140,12 +145,12 @@
 
 		// news
 
-		addNews: function () {
+		addNews: function() {
 			var self = this;
 			$.ajax({
 				url: "https://" + Config.routes.root + "/news.json",
 				dataType: "json",
-				success: function (data) {
+				success: function(data) {
 					var html = '';
 					for (var i = 0; i < 2; i++) {
 						var post = data[i];
@@ -176,7 +181,7 @@
 		 * PMs
 		 *********************************************************/
 
-		addPM: function (name, message, target) {
+		addPM: function(name, message, target) {
 			var userid = toUserid(name);
 			if (app.ignore[userid] && " +\u2606\u203D\u2716!".includes(name.charAt(0))) {
 				if (!app.ignoreNotified) {
@@ -229,7 +234,7 @@
 				$pmWindow.find('h3').addClass('pm-notifying');
 			}
 		},
-		updateChallenge: function ($pmWindow, challenge, name, oName) {
+		updateChallenge: function($pmWindow, challenge, name, oName) {
 			var splitChallenge = challenge.split('|');
 
 			var formatName = splitChallenge[0];
@@ -285,7 +290,7 @@
 			$challenge.html(buf);
 		},
 
-		selectTeammate: function (e) {
+		selectTeammate: function(e) {
 			e.stopPropagation();
 			e.preventDefault();
 			var input = $('input.partnerselect').get(0);
@@ -295,7 +300,7 @@
 			input.value = "";
 		},
 
-		openPM: function (name, dontFocus) {
+		openPM: function(name, dontFocus) {
 			var userid = toID(name);
 			var $pmWindow = this.$pmBox.find('.pm-window-' + userid);
 			if (!$pmWindow.length) {
@@ -332,7 +337,7 @@
 			if (!dontFocus) this.$el.scrollTop(0);
 			return $pmWindow;
 		},
-		closePM: function (e) {
+		closePM: function(e) {
 			var userid;
 			if (e.currentTarget) {
 				e.preventDefault();
@@ -386,7 +391,7 @@
 
 			if (app.curSideRoom) app.curSideRoom.focus();
 		},
-		minimizePM: function (e) {
+		minimizePM: function(e) {
 			var $pmWindow;
 			if (e.currentTarget) {
 				e.preventDefault();
@@ -413,33 +418,33 @@
 
 			$pmWindow.find('h3').removeClass('pm-notifying');
 		},
-		clickUsername: function (e) {
+		clickUsername: function(e) {
 			e.stopPropagation();
 			var name = $(e.currentTarget).data('name') || $(e.currentTarget).text();
 			app.addPopup(UserPopup, { name: name, sourceEl: e.currentTarget });
 		},
-		clickPMButtonBarChallenge: function (e) {
+		clickPMButtonBarChallenge: function(e) {
 			var name = $(e.currentTarget).closest('.pm-window').data('name');
 			app.rooms[''].requestNotifications();
 			app.focusRoom('');
 			app.rooms[''].challenge(name);
 		},
-		clickPMButtonBarUserOptions: function (e) {
+		clickPMButtonBarUserOptions: function(e) {
 			e.stopPropagation();
 			var name = $(e.currentTarget).closest('.pm-window').data('name');
 			var userid = toID($(e.currentTarget).closest('.pm-window').data('name'));
 			app.addPopup(UserOptions, { name: name, userid: userid, sourceEl: e.currentTarget });
 		},
-		focusPM: function (name) {
+		focusPM: function(name) {
 			this.openPM(name).prependTo(this.$pmBox).find('textarea[name=message]').focus();
 		},
-		onFocusPM: function (e) {
+		onFocusPM: function(e) {
 			$(e.currentTarget).closest('.pm-window').addClass('focused').find('h3').removeClass('pm-notifying');
 		},
-		onBlurPM: function (e) {
+		onBlurPM: function(e) {
 			$(e.currentTarget).closest('.pm-window').removeClass('focused');
 		},
-		keyUp: function (e) {
+		keyUp: function(e) {
 			var $target = $(e.currentTarget);
 			// Android Chrome compose keycode
 			// Android Chrome no longer sends keyCode 13 when Enter is pressed on
@@ -449,7 +454,7 @@
 				this.submitPM(e);
 			}
 		},
-		submitPM: function (e) {
+		submitPM: function(e) {
 			e.preventDefault();
 			e.stopPropagation();
 			var $target = $(e.currentTarget);
@@ -475,75 +480,75 @@
 				}
 			}
 			switch (cmd.toLowerCase()) {
-			case 'ignore':
-				if (app.ignore[userid]) {
-					$chat.append('<div class="chat">User ' + userid + ' is already on your ignore list. (Moderator messages will not be ignored.)</div>');
-				} else {
-					app.ignore[userid] = 1;
-					$chat.append('<div class="chat">User ' + userid + ' ignored. (Moderator messages will not be ignored.)</div>');
-					app.saveIgnore();
-				}
-				break;
-			case 'unignore':
-				if (!app.ignore[userid]) {
-					$chat.append('<div class="chat">User ' + userid + ' isn\'t on your ignore list.</div>');
-				} else {
-					delete app.ignore[userid];
-					$chat.append('<div class="chat">User ' + userid + ' no longer ignored.</div>');
-					app.saveIgnore();
-				}
-				break;
-			case 'nick':
-				if ($.trim(data)) {
-					app.user.rename(data);
-				} else {
-					app.addPopup(LoginPopup);
-				}
-				return false;
-			case 'chal':
-			case 'chall':
-			case 'challenge':
-				this.challenge(userid, data);
-				break;
-			case 'clear':
-				$chat.empty();
-				break;
-			case 'rank': case 'ranking': case 'rating': case 'ladder':
-			case 'user': case 'open':
-			case 'debug':
-			case 'news':
-			case 'ignorelist':
-			case 'clearpms':
-			case 'showdebug': case 'hidedebug':
-			case 'showjoins': case 'hidejoins':
-			case 'showbattles': case 'hidebattles':
-			case 'packhidden': case 'unpackhidden':
-			case 'timestamps':
-			case 'hl': case 'highlight':
-			case 'buttonban': case 'buttonmute': case 'buttonunmute': case 'buttonkick': case 'buttonwarn':
-			case 'part': case 'leave':
-			case 'afd':
-				$chat.append('<div class="chat">Use this command in a proper chat room.</div>');
-				break;
-			default:
-				if (!userid) userid = '~';
-				if (text.startsWith('\n')) text = text.slice(1);
-				if (text.endsWith('\n')) text = text.slice(0, -1);
-				text = ('\n' + text).replace(/\n/g, '\n/pm ' + userid + ', ').slice(1);
-				if (text.length > 80000) {
-					app.addPopupMessage("Your message is too long.");
-					return;
-				}
-				if (!(text.startsWith('/') || text.startsWith('!')) && app.ignore[userid]) {
-					app.addPopupMessage("You can't PM a user you've ignored. Use /unignore to remove them from your ignore list.");
-					return;
-				}
-				this.send(text);
+				case 'ignore':
+					if (app.ignore[userid]) {
+						$chat.append('<div class="chat">User ' + userid + ' is already on your ignore list. (Moderator messages will not be ignored.)</div>');
+					} else {
+						app.ignore[userid] = 1;
+						$chat.append('<div class="chat">User ' + userid + ' ignored. (Moderator messages will not be ignored.)</div>');
+						app.saveIgnore();
+					}
+					break;
+				case 'unignore':
+					if (!app.ignore[userid]) {
+						$chat.append('<div class="chat">User ' + userid + ' isn\'t on your ignore list.</div>');
+					} else {
+						delete app.ignore[userid];
+						$chat.append('<div class="chat">User ' + userid + ' no longer ignored.</div>');
+						app.saveIgnore();
+					}
+					break;
+				case 'nick':
+					if ($.trim(data)) {
+						app.user.rename(data);
+					} else {
+						app.addPopup(LoginPopup);
+					}
+					return false;
+				case 'chal':
+				case 'chall':
+				case 'challenge':
+					this.challenge(userid, data);
+					break;
+				case 'clear':
+					$chat.empty();
+					break;
+				case 'rank': case 'ranking': case 'rating': case 'ladder':
+				case 'user': case 'open':
+				case 'debug':
+				case 'news':
+				case 'ignorelist':
+				case 'clearpms':
+				case 'showdebug': case 'hidedebug':
+				case 'showjoins': case 'hidejoins':
+				case 'showbattles': case 'hidebattles':
+				case 'packhidden': case 'unpackhidden':
+				case 'timestamps':
+				case 'hl': case 'highlight':
+				case 'buttonban': case 'buttonmute': case 'buttonunmute': case 'buttonkick': case 'buttonwarn':
+				case 'part': case 'leave':
+				case 'afd':
+					$chat.append('<div class="chat">Use this command in a proper chat room.</div>');
+					break;
+				default:
+					if (!userid) userid = '~';
+					if (text.startsWith('\n')) text = text.slice(1);
+					if (text.endsWith('\n')) text = text.slice(0, -1);
+					text = ('\n' + text).replace(/\n/g, '\n/pm ' + userid + ', ').slice(1);
+					if (text.length > 80000) {
+						app.addPopupMessage("Your message is too long.");
+						return;
+					}
+					if (!(text.startsWith('/') || text.startsWith('!')) && app.ignore[userid]) {
+						app.addPopupMessage("You can't PM a user you've ignored. Use /unignore to remove them from your ignore list.");
+						return;
+					}
+					this.send(text);
 			}
 			$target.val('');
 			$target.trigger('keyup'); // force a resize
 		},
-		keyDown: function (e) {
+		keyDown: function(e) {
 			var cmdKey = (((e.cmdKey || e.metaKey) ? 1 : 0) + (e.ctrlKey ? 1 : 0) === 1) && !e.altKey && !e.shiftKey;
 			if (e.keyCode === 13 && !e.shiftKey) { // Enter
 				this.submitPM(e);
@@ -600,7 +605,7 @@
 				}
 			}
 		},
-		chatHistoryUp: function (e) {
+		chatHistoryUp: function(e) {
 			var $textbox = $(e.currentTarget);
 			var idx = +$textbox.prop('selectionStart');
 			var line = $textbox.val();
@@ -611,7 +616,7 @@
 			$textbox.val(chatHistory.up(line));
 			return true;
 		},
-		chatHistoryDown: function (e) {
+		chatHistoryDown: function(e) {
 			var $textbox = $(e.currentTarget);
 			var idx = +$textbox.prop('selectionStart');
 			var line = $textbox.val();
@@ -622,7 +627,7 @@
 			return true;
 		},
 		chatHistories: {},
-		clickPMBackground: function (e) {
+		clickPMBackground: function(e) {
 			if (!e.shiftKey && !e.cmdKey && !e.ctrlKey) {
 				if (window.getSelection && !window.getSelection().isCollapsed) {
 					return;
@@ -648,7 +653,7 @@
 				$target.find('textarea[name=message]').focus();
 			}
 		},
-		dblClickPMHeader: function (e) {
+		dblClickPMHeader: function(e) {
 			e.preventDefault();
 			e.stopPropagation();
 			if (window.getSelection) {
@@ -657,11 +662,11 @@
 				document.selection.empty();
 			}
 		},
-		clickSpoiler: function (e) {
+		clickSpoiler: function(e) {
 			$(e.currentTarget).toggleClass('spoiler-shown');
 		},
 
-		clickDatasearchResults: function (e) {
+		clickDatasearchResults: function(e) {
 			if ($(e.target)[0].href) return;
 			if (window.getSelection && !window.getSelection().isCollapsed) return;
 			var target = $(e.currentTarget).closest('[class=datasearch]')[0];
@@ -676,16 +681,16 @@
 
 		// support for buttons that can be sent by the server:
 
-		joinRoom: function (room) {
+		joinRoom: function(room) {
 			app.joinRoom(room);
 		},
-		avatars: function () {
+		avatars: function() {
 			app.addPopup(AvatarsPopup);
 		},
-		openSounds: function () {
+		openSounds: function() {
 			app.addPopup(SoundsPopup, { type: 'semimodal' });
 		},
-		openOptions: function () {
+		openOptions: function() {
 			app.addPopup(OptionsPopup, { type: 'semimodal' });
 		},
 
@@ -693,19 +698,19 @@
 
 		challengesFrom: null,
 		challengeTo: null,
-		resetPending: function () {
+		resetPending: function() {
 			this.updateSearch();
 			var self = this;
-			this.$('form.pending').closest('.pm-window').each(function (i, el) {
+			this.$('form.pending').closest('.pm-window').each(function(i, el) {
 				$(el).find('.challenge').remove();
 				self.challenge($(el).data('userid'));
 			});
-			this.$('button[name=acceptChallenge]').each(function (i, el) {
+			this.$('button[name=acceptChallenge]').each(function(i, el) {
 				el.disabled = false;
 			});
 		},
 		searching: false,
-		updateSearch: function (data) {
+		updateSearch: function(data) {
 			if (data) {
 				this.searching = data.searching;
 				this.games = data.games;
@@ -765,12 +770,12 @@
 				}
 			}
 		},
-		showSearchGroup: function (v, el) {
+		showSearchGroup: function(v, el) {
 			var $searchGroup = $('.mainmenu button.big').closest('.menugroup');
 			$searchGroup.show();
 			$(el).closest('p').hide();
 		},
-		updateChallenges: function (data) {
+		updateChallenges: function(data) {
 			this.challengesFrom = data.challengesFrom;
 			this.challengeTo = data.challengeTo;
 			for (var i in data.challengesFrom) {
@@ -799,7 +804,7 @@
 			}
 
 			var self = this;
-			this.$('.pm-window').each(function (i, el) {
+			this.$('.pm-window').each(function(i, el) {
 				var $pmWindow = $(el);
 				var userid = el.getAttribute('data-userid');
 				var name = $pmWindow.data('name');
@@ -843,7 +848,7 @@
 
 			if (atLeastOneGen5 && !Dex.loadedSpriteData['bw']) Dex.loadSpriteData('bw');
 		},
-		openChallenge: function (name, $pmWindow) {
+		openChallenge: function(name, $pmWindow) {
 			if (!$pmWindow) $pmWindow = this.openPM(name, true);
 			var $challenge = $pmWindow.find('.challenge');
 			if (!$challenge.length) {
@@ -851,7 +856,7 @@
 			}
 			return $challenge;
 		},
-		updateFormats: function () {
+		updateFormats: function() {
 			if (!window.BattleFormats) {
 				this.$('.mainmenu button.big').html('<em>Connecting...</em>').addClass('disabled');
 				return;
@@ -867,27 +872,27 @@
 
 			if (!this.searching) this.$('.mainmenu button.big').html('<strong>Battle!</strong><br /><small>Find a random opponent</small>').removeClass('disabled');
 			var self = this;
-			this.$('button[name=format]').each(function (i, el) {
+			this.$('button[name=format]').each(function(i, el) {
 				var val = el.value;
 				var $teamButton = $(el).closest('form').find('button[name=team]');
 				$(el).replaceWith(self.renderFormats(val));
 				$teamButton.replaceWith(self.renderTeams(val));
 			});
 		},
-		reconnect: function () {
+		reconnect: function() {
 			document.location.reload();
 		},
-		updateTeams: function () {
+		updateTeams: function() {
 			if (!window.BattleFormats) return;
 			var self = this;
 
-			this.$('button[name=team]').each(function (i, el) {
+			this.$('button[name=team]').each(function(i, el) {
 				if (el.value === 'random') return;
 				var format = $(el).closest('form').find('button[name=format]').val();
 				$(el).replaceWith(self.renderTeams(format));
 			});
 		},
-		updateRightMenu: function () {
+		updateRightMenu: function() {
 			if (app.curSideRoom) {
 				this.$('.rightmenu').hide();
 			} else {
@@ -896,7 +901,7 @@
 		},
 
 		// challenge buttons
-		challenge: function (name, format, team) {
+		challenge: function(name, format, team) {
 			var userid = toID(name);
 			var $challenge = this.$('.pm-window-' + userid + ' .challenge');
 			if ($challenge.length && !$challenge.find('button[name=dismissChallenge]').length) {
@@ -924,7 +929,7 @@
 			buf += '<p class="buttonbar"><button name="makeChallenge" class="button"><strong>Challenge</strong></button> <button type="button" name="dismissChallenge" class="button">Cancel</button></p></form>';
 			$challenge.html(buf);
 		},
-		acceptChallenge: function (i, target) {
+		acceptChallenge: function(i, target) {
 			this.requestNotifications();
 			var $pmWindow = $(target).closest('.pm-window');
 			var userid = $pmWindow.data('userid');
@@ -941,7 +946,7 @@
 					app.addPopupMessage("You need to go into the Teambuilder and build a team for this format.");
 					return;
 				}
-				app.sendTeam(team, function () {
+				app.sendTeam(team, function() {
 					target.disabled = true;
 					app.send(privacy + '/accept ' + userid);
 				});
@@ -950,12 +955,12 @@
 				app.send(privacy + '/accept ' + userid);
 			}
 		},
-		rejectChallenge: function (i, target) {
+		rejectChallenge: function(i, target) {
 			var userid = $(target).closest('.pm-window').data('userid');
 			$(target).closest('.challenge').remove();
 			app.send('/reject ' + userid);
 		},
-		makeChallenge: function (i, target) {
+		makeChallenge: function(i, target) {
 			this.requestNotifications();
 			var $pmWindow = $(target).closest('.pm-window');
 			var userid = $pmWindow.data('userid');
@@ -994,16 +999,16 @@
 			buf += '<p class="buttonbar"><button name="cancelChallenge" class="button">Cancel</button></p></form>';
 
 			$(target).closest('.challenge').html(buf);
-			app.sendTeam(team, function () {
+			app.sendTeam(team, function() {
 				app.send(privacy + '/challenge ' + userid + ', ' + format);
 			});
 		},
-		cancelChallenge: function (i, target) {
+		cancelChallenge: function(i, target) {
 			var userid = $(target).closest('.pm-window').data('userid');
 			$(target).closest('.challenge').remove();
 			app.send('/cancelchallenge ' + userid);
 		},
-		dismissChallenge: function (i, target) {
+		dismissChallenge: function(i, target) {
 			var $challenge = $(target).closest('.challenge');
 			var pChallenge = $challenge.find('button[name=dismissChallenge]').attr('data-pendingchallenge');
 			var $pmWindow = $challenge.closest('.pm-window');
@@ -1016,16 +1021,16 @@
 				this.updateChallenge($pmWindow, challenge, name, oName);
 			}
 		},
-		format: function (format, button) {
+		format: function(format, button) {
 			if (window.BattleFormats) app.addPopup(FormatPopup, { format: format, sourceEl: button });
 		},
-		adjustPrivacy: function (disallowSpectators) {
+		adjustPrivacy: function(disallowSpectators) {
 			Storage.prefs('disallowspectators', disallowSpectators);
 			if (disallowSpectators) return '/noreply /hidenext\n';
 			var settings = app.user.get('settings');
 			return (settings.hiddenNextBattle ? '/noreply /hidenext off\n' : '') + (settings.inviteOnlyNextBattle ? '/noreply /ionext off\n' : '');
 		},
-		team: function (team, button) {
+		team: function(team, button) {
 			var format = $(button).closest('form').find('button[name=format]').val();
 			app.addPopup(TeamPopup, { team: team, format: format, sourceEl: button, folderToggleOn: true, folderNotExpanded: [] });
 		},
@@ -1033,7 +1038,7 @@
 		// format/team selection
 
 		curFormat: '',
-		renderFormats: function (formatid, noChoice) {
+		renderFormats: function(formatid, noChoice) {
 			if (!window.BattleFormats) {
 				return '<button class="select formatselect" name="format" disabled value="' + BattleLog.escapeHTML(formatid) + '"><em>Loading...</em></button>';
 			}
@@ -1057,7 +1062,7 @@
 		},
 		curTeamFormat: '',
 		curTeamIndex: 0,
-		renderTeams: function (formatid, teamIndex) {
+		renderTeams: function(formatid, teamIndex) {
 			if (Storage.whenTeamsLoaded.error) {
 				return '<button class="select teamselect" name="joinRoom" value="teambuilder"><em class="message-error">Error loading teams</em></button>';
 			}
@@ -1101,7 +1106,7 @@
 		},
 
 		// buttons
-		search: function (i, button) {
+		search: function(i, button) {
 			if (!window.BattleFormats) return;
 			this.requestNotifications();
 			var $searchForm = $(button).closest('form');
@@ -1137,24 +1142,24 @@
 			$searchForm.append('<p class="cancel buttonbar"><button name="cancelSearch" class="button">Cancel</button></p>');
 
 			var self = this;
-			app.sendTeam(team, function () {
-				self.searchDelay = setTimeout(function () {
+			app.sendTeam(team, function() {
+				self.searchDelay = setTimeout(function() {
 					app.send(self.adjustPrivacy($privacyCheckbox.is(':checked')) + '/search ' + format);
 				}, 3000);
 			});
 		},
-		cancelSearch: function () {
+		cancelSearch: function() {
 			clearTimeout(this.searchDelay);
 			app.send('/cancelsearch');
 			this.searching = false;
 			this.updateSearch();
 		},
-		finduser: function () {
+		finduser: function() {
 			if (app.isDisconnected) {
 				app.addPopupMessage("You are offline.");
 				return;
 			}
-			app.addPopupPrompt("Username", "Open", function (target) {
+			app.addPopupPrompt("Username", "Open", function(target) {
 				if (!target) return;
 				if (toID(target) === 'zarel') {
 					app.addPopup(Popup, { htmlMessage: "Zarel is very busy; please don't contact him this way. If you're looking for help, try <a href=\"/help\">joining the Help room</a>?" });
@@ -1169,7 +1174,7 @@
 			});
 		}
 	}, {
-		parseChatMessage: function (message, name, timestamp, isHighlighted, $chatElem, isNotPM) {
+		parseChatMessage: function(message, name, timestamp, isHighlighted, $chatElem, isNotPM) {
 			var showMe = !((Dex.prefs('chatformatting') || {}).hideme);
 			var group = ' ';
 			if (!/[A-Za-z0-9]/.test(name.charAt(0))) {
@@ -1195,64 +1200,64 @@
 			}
 
 			switch (cmd) {
-			case 'me':
-				if (!showMe) return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>/me' + BattleLog.parseMessage(' ' + target) + '</em></div>';
-				return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">&bull;</strong> <em>' + clickableName + '<i>' + BattleLog.parseMessage(' ' + target) + '</i></em></div>';
-			case 'mee':
-				if (!showMe) return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>/me' + BattleLog.parseMessage(' ' + target).slice(1) + '</em></div>';
-				return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">&bull;</strong> <em>' + clickableName + '<i>' + BattleLog.parseMessage(' ' + target).slice(1) + '</i></em></div>';
-			case 'invite':
-				var roomid = toRoomid(target);
-				return [
-					'<div class="chat">' + timestamp + '<em>' + clickableName + ' invited you to join the room "' + roomid + '"</em></div>',
-					'<div class="notice"><button name="joinRoom" value="' + roomid + '" class="button">Join ' + roomid + '</button></div>'
-				];
-			case 'announce':
-				return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <span class="message-announce">' + BattleLog.parseMessage(target) + '</span></div>';
-			case 'log':
-				return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<span class="message-log">' + BattleLog.parseMessage(target) + '</span></div>';
-			case 'data-pokemon':
-			case 'data-item':
-			case 'data-ability':
-			case 'data-move':
-				return '[outdated message type not supported]';
-			case 'text':
-				return { message: '<div class="chat">' + BattleLog.parseMessage(target) + '</div>', noNotify: true };
-			case 'error':
-				return '<div class="chat message-error">' + BattleLog.escapeHTML(target) + '</div>';
-			case 'html':
-				if (!name) {
-					return { message: '<div class="chat' + hlClass + '">' + timestamp + '<em>' + BattleLog.sanitizeHTML(target) + '</em></div>', noNotify: isNotPM };
-				}
-				return { message: '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>' + BattleLog.sanitizeHTML(target) + '</em></div>', noNotify: isNotPM };
-			case 'uhtml':
-			case 'uhtmlchange':
-				var parts = target.split(',');
-				var $elements = $chatElem.find('div.uhtml-' + toID(parts[0]));
-				var html = parts.slice(1).join(',');
-				if (!html) {
-					$elements.remove();
-				} else if (!$elements.length) {
-					$chatElem.append('<div class="chat uhtml-' + toID(parts[0]) + ' chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(html) + '</div>');
-				} else if (cmd === 'uhtmlchange') {
-					$elements.html(BattleLog.sanitizeHTML(html));
-				} else {
-					$elements.remove();
-					$chatElem.append('<div class="chat uhtml-' + toID(parts[0]) + ' chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(html) + '</div>');
-				}
-				return { message: '', noNotify: isNotPM };
-			case 'raw':
-				return { message: '<div class="chat chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(target) + '</div>', noNotify: isNotPM };
-			case 'nonotify':
-				return { message: '<div class="chat">' + timestamp + BattleLog.sanitizeHTML(target) + '</div>', noNotify: true };
-			case 'challenge':
-				return { challenge: target };
-			default:
-				// Not a command or unsupported. Parsed as a normal chat message.
-				if (!name) {
-					return '<div class="chat' + hlClass + '">' + timestamp + '<em>' + BattleLog.parseMessage(message) + '</em></div>';
-				}
-				return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>' + BattleLog.parseMessage(message) + '</em></div>';
+				case 'me':
+					if (!showMe) return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>/me' + BattleLog.parseMessage(' ' + target) + '</em></div>';
+					return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">&bull;</strong> <em>' + clickableName + '<i>' + BattleLog.parseMessage(' ' + target) + '</i></em></div>';
+				case 'mee':
+					if (!showMe) return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>/me' + BattleLog.parseMessage(' ' + target).slice(1) + '</em></div>';
+					return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">&bull;</strong> <em>' + clickableName + '<i>' + BattleLog.parseMessage(' ' + target).slice(1) + '</i></em></div>';
+				case 'invite':
+					var roomid = toRoomid(target);
+					return [
+						'<div class="chat">' + timestamp + '<em>' + clickableName + ' invited you to join the room "' + roomid + '"</em></div>',
+						'<div class="notice"><button name="joinRoom" value="' + roomid + '" class="button">Join ' + roomid + '</button></div>'
+					];
+				case 'announce':
+					return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <span class="message-announce">' + BattleLog.parseMessage(target) + '</span></div>';
+				case 'log':
+					return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<span class="message-log">' + BattleLog.parseMessage(target) + '</span></div>';
+				case 'data-pokemon':
+				case 'data-item':
+				case 'data-ability':
+				case 'data-move':
+					return '[outdated message type not supported]';
+				case 'text':
+					return { message: '<div class="chat">' + BattleLog.parseMessage(target) + '</div>', noNotify: true };
+				case 'error':
+					return '<div class="chat message-error">' + BattleLog.escapeHTML(target) + '</div>';
+				case 'html':
+					if (!name) {
+						return { message: '<div class="chat' + hlClass + '">' + timestamp + '<em>' + BattleLog.sanitizeHTML(target) + '</em></div>', noNotify: isNotPM };
+					}
+					return { message: '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>' + BattleLog.sanitizeHTML(target) + '</em></div>', noNotify: isNotPM };
+				case 'uhtml':
+				case 'uhtmlchange':
+					var parts = target.split(',');
+					var $elements = $chatElem.find('div.uhtml-' + toID(parts[0]));
+					var html = parts.slice(1).join(',');
+					if (!html) {
+						$elements.remove();
+					} else if (!$elements.length) {
+						$chatElem.append('<div class="chat uhtml-' + toID(parts[0]) + ' chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(html) + '</div>');
+					} else if (cmd === 'uhtmlchange') {
+						$elements.html(BattleLog.sanitizeHTML(html));
+					} else {
+						$elements.remove();
+						$chatElem.append('<div class="chat uhtml-' + toID(parts[0]) + ' chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(html) + '</div>');
+					}
+					return { message: '', noNotify: isNotPM };
+				case 'raw':
+					return { message: '<div class="chat chatmessage-' + toID(name) + '">' + BattleLog.sanitizeHTML(target) + '</div>', noNotify: isNotPM };
+				case 'nonotify':
+					return { message: '<div class="chat">' + timestamp + BattleLog.sanitizeHTML(target) + '</div>', noNotify: true };
+				case 'challenge':
+					return { challenge: target };
+				default:
+					// Not a command or unsupported. Parsed as a normal chat message.
+					if (!name) {
+						return '<div class="chat' + hlClass + '">' + timestamp + '<em>' + BattleLog.parseMessage(message) + '</em></div>';
+					}
+					return '<div class="chat chatmessage-' + toID(name) + hlClass + mineClass + '">' + timestamp + '<strong style="' + color + '">' + clickableName + ':</strong> <em>' + BattleLog.parseMessage(message) + '</em></div>';
 			}
 		}
 	});
@@ -1263,7 +1268,7 @@
 			'click details': 'updateOpen',
 			'click i.fa': 'updateStar'
 		},
-		initialize: function (data) {
+		initialize: function(data) {
 			this.data = data;
 			if (!this.open) {
 				// todo: maybe make this configurable? not sure since it will cache what users toggle.
@@ -1289,7 +1294,7 @@
 			html += '</span><div style="clear:left"></div><p></p>';
 			this.$el.html(html);
 		},
-		renderFormats: function () {
+		renderFormats: function() {
 			var data = this.data;
 			var curFormat = data.format;
 			var bufs = [];
@@ -1349,7 +1354,7 @@
 				);
 			}
 			var html = '';
-			if (bufs.every(function (buf) { return !buf; })) {
+			if (bufs.every(function(buf) { return !buf; })) {
 				html = '<ul class="popupmenu"><em>No formats found</em></ul>';
 			} else {
 				for (var i = 1, l = bufs.length; i < l; i++) {
@@ -1367,12 +1372,12 @@
 			}
 			return html;
 		},
-		update: function () {
+		update: function() {
 			var $formatEl = this.$el.find('span[name=formats]');
 			$formatEl.empty();
 			$formatEl.html(this.renderFormats());
 		},
-		updateStar: function (ev) {
+		updateStar: function(ev) {
 			ev.preventDefault();
 			ev.stopPropagation();
 			var format = $(ev.target).parent().attr('value');
@@ -1384,16 +1389,16 @@
 			Storage.prefs('starredformats', this.starred);
 			this.update();
 		},
-		updateOpen: function (ev) {
+		updateOpen: function(ev) {
 			var section = $(ev.currentTarget).attr('section');
 			this.open[section] = !this.open[section];
 			Storage.prefs('openformats', this.open);
 		},
-		updateSearch: function (event) {
+		updateSearch: function(event) {
 			this.search = $(event.currentTarget).val();
 			this.update();
 		},
-		shouldDisplayFormat: function (format) {
+		shouldDisplayFormat: function(format) {
 			if (this.selectType === 'teambuilder') {
 				if (!format.isTeambuilderFormat) return false;
 			} else {
@@ -1402,7 +1407,7 @@
 			}
 			return true;
 		},
-		selectFormat: function (format) {
+		selectFormat: function(format) {
 			var $form = this.$form.length ? this.$form : this.sourceEl.closest('form');
 
 			if (this.onselect) {
@@ -1440,7 +1445,7 @@
 				}
 
 				var $partnerLabels = $('label[name=partner]');
-				$partnerLabels.each(function (i, label) {
+				$partnerLabels.each(function(i, label) {
 					label.style.display = BattleFormats[format].partner ? '' : 'none';
 				});
 			}
@@ -1451,7 +1456,7 @@
 	});
 
 	var TeamPopup = this.TeamPopup = this.Popup.extend({
-		initialize: function (data) {
+		initialize: function(data) {
 			var bufs = ['', '', '', '', ''];
 			var curBuf = 0;
 			var teams = Storage.teams;
@@ -1593,11 +1598,11 @@
 		events: {
 			'click input[type=checkbox]': 'foldersToggle'
 		},
-		moreTeams: function () {
+		moreTeams: function() {
 			this.close();
 			app.addPopup(TeamPopup, { team: this.team, format: this.format, sourceEl: this.sourceEl, room: this.room, isMoreTeams: true, folderToggleOn: this.folderToggleOn, folderNotExpanded: this.folderNotExpanded });
 		},
-		teambuilder: function () {
+		teambuilder: function() {
 			var teamFormat = this.teamFormat;
 			this.close();
 			app.joinRoom('teambuilder');
@@ -1606,9 +1611,9 @@
 				teambuilder.selectFolder(teamFormat);
 			}
 		},
-		selectFolder: function (key) {
+		selectFolder: function(key) {
 			var keyExists = false;
-			var folderNotExpanded = this.folderNotExpanded.filter(function (folder) {
+			var folderNotExpanded = this.folderNotExpanded.filter(function(folder) {
 				if (folder === key) {
 					keyExists = true;
 					return false;
@@ -1621,11 +1626,11 @@
 			this.close();
 			app.addPopup(TeamPopup, { team: this.team, format: this.format, sourceEl: this.sourceEl, room: this.room, isMoreTeams: this.isMoreTeams, folderToggleOn: this.folderToggleOn, folderNotExpanded: folderNotExpanded });
 		},
-		foldersToggle: function () {
+		foldersToggle: function() {
 			this.close();
 			app.addPopup(TeamPopup, { team: this.team, format: this.format, sourceEl: this.sourceEl, room: this.room, isMoreTeams: this.isMoreTeams, folderToggleOn: !this.folderToggleOn, folderNotExpanded: this.folderNotExpanded });
 		},
-		selectTeam: function (i) {
+		selectTeam: function(i) {
 			i = +i;
 			this.sourceEl.val(i).html(TeamPopup.renderTeam(i));
 			if (this.sourceEl[0].offsetParent.className === 'mainmenuwrapper') {
@@ -1638,7 +1643,7 @@
 			this.close();
 		}
 	}, {
-		renderTeam: function (i) {
+		renderTeam: function(i) {
 			if (i === 'random') {
 				var buf = '<strong>Random team</strong><small>';
 				for (var i = 0; i < 6; i++) {

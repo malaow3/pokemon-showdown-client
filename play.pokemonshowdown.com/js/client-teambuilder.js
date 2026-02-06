@@ -1,5 +1,137 @@
 (function (exports, $) {
 
+	// Pokebin WASM decryption support
+	var pokebinWasm = null;
+	var pokebinWasmPromise = null;
+
+	function loadPokebinWasm() {
+		if (pokebinWasm) return Promise.resolve(pokebinWasm);
+		if (pokebinWasmPromise) return pokebinWasmPromise;
+		pokebinWasmPromise = (function () {
+			try {
+				var memory;
+				return WebAssembly.instantiateStreaming(
+					fetch('https://pokebin.com/wasm'),
+					{
+						env: {
+							_throwError: function (pointer, length) {
+								var slice = new Uint8Array(memory.buffer, pointer, length);
+								throw new Error(new TextDecoder().decode(slice));
+							},
+							_consoleLog: function (pointer, length) {
+								var slice = new Uint8Array(memory.buffer, pointer, length);
+								console.log(new TextDecoder().decode(slice));
+							}
+						}
+					}
+				).then(function (wasmModule) {
+					var wasmExports = wasmModule.instance.exports;
+					memory = wasmExports.memory;
+					wasmExports.init(BigInt(Date.now()));
+					pokebinWasm = wasmExports;
+					return pokebinWasm;
+				});
+			} catch (e) {
+				console.error('Failed to load pokebin WASM:', e);
+				pokebinWasmPromise = null;
+				return Promise.resolve(null);
+			}
+		})();
+		return pokebinWasmPromise;
+	}
+
+	function pokebinDecrypt(encrypted, passphrase) {
+		if (!pokebinWasm) return null;
+		var wasmExports = pokebinWasm;
+		var passphraseLen = passphrase.length;
+		var encryptedLen = encrypted.length;
+
+		var bufferPtr = wasmExports.allocUint8(passphraseLen + encryptedLen);
+		if (!bufferPtr) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		var memoryView = new Uint8Array(wasmExports.memory.buffer);
+		var passphraseBytes = new TextEncoder().encode(passphrase);
+		var encryptedBytes = new TextEncoder().encode(encrypted);
+
+		for (var i = 0; i < passphraseLen; i++) {
+			memoryView[bufferPtr + i] = passphraseBytes[i];
+		}
+		for (var i = 0; i < encryptedLen; i++) {
+			memoryView[bufferPtr + passphraseLen + i] = encryptedBytes[i];
+		}
+
+		var success = wasmExports.decryptMessage(bufferPtr, passphraseLen, encryptedLen);
+		if (!success) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		var resultPtr = wasmExports.getResultPtr();
+		var resultLen = wasmExports.getResultLen();
+		if (!resultPtr || !resultLen) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		memoryView = new Uint8Array(wasmExports.memory.buffer);
+		var result = new TextDecoder().decode(
+			memoryView.slice(resultPtr, resultPtr + resultLen)
+		);
+		wasmExports.resetArena();
+		return result;
+	}
+
+	function pokebinEncrypt(message, passphrase) {
+		if (!pokebinWasm) return null;
+		var wasmExports = pokebinWasm;
+		var passphraseLen = passphrase.length;
+		var messageLen = message.length;
+
+		var bufferPtr = wasmExports.allocUint8(passphraseLen + messageLen);
+		if (!bufferPtr) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		var memoryView = new Uint8Array(wasmExports.memory.buffer);
+		var passphraseBytes = new TextEncoder().encode(passphrase);
+		var messageBytes = new TextEncoder().encode(message);
+
+		for (var i = 0; i < passphraseLen; i++) {
+			memoryView[bufferPtr + i] = passphraseBytes[i];
+		}
+		for (var i = 0; i < messageLen; i++) {
+			memoryView[bufferPtr + passphraseLen + i] = messageBytes[i];
+		}
+
+		var success = wasmExports.encryptMessage(bufferPtr, passphraseLen, messageLen);
+		if (!success) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		var resultPtr = wasmExports.getResultPtr();
+		var resultLen = wasmExports.getResultLen();
+		if (!resultPtr || !resultLen) {
+			wasmExports.resetArena();
+			return null;
+		}
+
+		memoryView = new Uint8Array(wasmExports.memory.buffer);
+		var result = new TextDecoder().decode(
+			memoryView.slice(resultPtr, resultPtr + resultLen)
+		);
+		wasmExports.resetArena();
+		return result;
+	}
+
+	function utf8ToBase64(str) {
+		return btoa(String.fromCharCode.apply(null, new TextEncoder().encode(str)));
+	}
+
 	// this is a useful global
 	var teams;
 
@@ -930,6 +1062,61 @@
 			}
 			document.getElementById("pokepasteForm").submit();
 		},
+		pokebinExport: function () {
+			var isOTS = this.$('input[name=pokebinOTS]').prop('checked');
+			var removeAuthor = this.$('input[name=pokebinRemoveAuthor]').prop('checked');
+			var password = this.$('input[name=pokebinPassword]').val() || '';
+
+			var team = Storage.exportTeam(this.curSetList, this.curTeam.gen, isOTS);
+			if (!team) return app.addPopupMessage("Add a Pokémon to your team before uploading it!");
+			team = team.trim();
+
+			var baseData = {
+				title: this.curTeam.name || 'Untitled',
+				author: removeAuthor ? '' : (app.user.get('name') || ''),
+				notes: '',
+				format: this.curTeam.format || '',
+				rental: '',
+				content: team
+			};
+
+			var self = this;
+			function submitPokebinForm(formData) {
+				var encoded = utf8ToBase64(JSON.stringify(formData));
+
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'https://pokebin.com/create';
+				form.target = '_blank';
+
+				var input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'data';
+				input.value = encoded;
+				form.appendChild(input);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+
+			if (password) {
+				loadPokebinWasm().then(function (wasm) {
+					if (!wasm) {
+						app.addPopupMessage("Failed to load encryption module.");
+						return;
+					}
+					var encrypted = pokebinEncrypt(JSON.stringify(baseData), password);
+					if (!encrypted) {
+						app.addPopupMessage("Encryption failed.");
+						return;
+					}
+					submitPokebinForm({encrypted: true, data: encrypted});
+				});
+			} else {
+				submitPokebinForm({encrypted: false, data: baseData});
+			}
+		},
 
 		// drag and drop
 
@@ -1232,6 +1419,12 @@
 					var btnClass = 'button' + (!this.curSetList.length || app.isDisconnected ? ' disabled' : '');
 					buf += ' <button name="validate" class="' + btnClass + '"><i class="fa fa-check"></i> Validate</button></li>';
 				}
+				buf += '<li style="padding: 2px 0">';
+				buf += '<label><input type="checkbox" name="pokebinOTS" /> OTS</label>';
+				buf += ' <label style="margin-left: 20px"><input type="checkbox" name="pokebinRemoveAuthor" /> Remove author</label>';
+				buf += ' <label style="margin-left: 20px">Password <input type="password" class="textbox" name="pokebinPassword" style="width: 120px" placeholder="Optional" /></label>';
+				buf += ' <button name="pokebinExport" style="margin-left: 20px" class="button exportbutton"><i class="fa fa-upload"></i> Upload to PokeBin</button>';
+				buf += '</li>';
 				if (!this.curSetList.length) {
 					buf += '<li><em>you have no pokemon lol</em></li>';
 				}
@@ -1423,11 +1616,14 @@
 			if (url) {
 				this.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', true);
 				var self = this;
+				var isPokebin = /^https?:\/\/pokebin\.com\/.*\/json\s*$/.test(url);
 				$.ajax({
 					type: 'GET',
 					url: url,
 					success: function (data) {
-						if (/^https?:\/\/pokepast\.es\/.*\/json\s*$/.test(url)) {
+						if (isPokebin) {
+							self.handlePokebinImport(data);
+						} else if (/^https?:\/\/pokepast\.es\/.*\/json\s*$/.test(url)) {
 							var notes = data.notes.split('\n');
 							if (notes[0].startsWith('Format: ')) {
 								var formatid = toID(notes[0].slice(8));
@@ -1444,11 +1640,13 @@
 							}
 
 							Storage.activeSetList = self.curSetList = Storage.importTeam(data.paste);
+							self.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', null);
+							self.back();
 						} else {
 							Storage.activeSetList = self.curSetList = Storage.importTeam(data);
+							self.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', null);
+							self.back();
 						}
-						self.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', null);
-						self.back();
 					},
 					error: function () {
 						app.addPopupMessage("Could not fetch a team from this URL. Make sure you copied the full link, or paste the team in by hand.");
@@ -1460,14 +1658,70 @@
 				this.back();
 			}
 		},
+		handlePokebinImport: function (data) {
+			var self = this;
+			var applyPokebinPaste = function (paste) {
+				var pasteTxt = paste.content.replace(/\r\n/g, '\n');
+				Storage.activeSetList = self.curSetList = Storage.importTeam(pasteTxt);
+				var format = paste.format;
+				if (format) {
+					var formatid = toID(format);
+					var formatObj = window.BattleFormats && window.BattleFormats[formatid];
+					if (formatObj) self.changeFormat(formatObj.id);
+				}
+				var title = paste.title;
+				if (title && !title.startsWith('Untitled')) {
+					title = title.replace(/[\|\\\/]/g, '');
+					self.$('.teamnameedit').val(title).change();
+				}
+				self.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', null);
+				self.back();
+			};
+
+			if (!data.encrypted) {
+				applyPokebinPaste(data.data);
+			} else {
+				self.$('.teamedit textarea, .teamedit .savebutton').attr('disabled', null);
+				var encryptedData = data.data;
+				app.addPopup(PromptPopup, {
+					message: 'Enter password for encrypted PokeBin team:',
+					button: 'Decrypt',
+					type: 'password',
+					callback: function (password) {
+						if (!password) return;
+						loadPokebinWasm().then(function (wasm) {
+							if (!wasm) {
+								app.addPopupMessage('Failed to load decryption module.');
+								return;
+							}
+							var decrypted = pokebinDecrypt(encryptedData, password);
+							if (!decrypted) {
+								app.addPopupMessage('Incorrect password.');
+								return;
+							}
+							var paste;
+							try {
+								paste = JSON.parse(decrypted);
+							} catch (e) {
+								app.addPopupMessage('Failed to decrypt team.');
+								return;
+							}
+							applyPokebinPaste(paste);
+						});
+					}
+				});
+			}
+		},
 		importableUrl: function (value) {
-			var match = value.match(/^https?:\/\/(pokepast\.es|gist\.github(?:usercontent)?\.com)\/(.*)\s*$/);
+			var match = value.match(/^https?:\/\/(pokebin\.com|pokepast\.es|gist\.github(?:usercontent)?\.com)\/(.*)\s*$/);
 			if (!match) return;
 
 			var host = match[1];
 			var path = match[2];
 
 			switch (host) {
+			case 'pokebin.com':
+				return 'https://pokebin.com/' + path.replace(/\/.*/, '') + '/json';
 			case 'pokepast.es':
 				return 'https://pokepast.es/' + path.replace(/\/.*/, '') + '/json';
 			default: // gist

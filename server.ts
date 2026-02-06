@@ -4,11 +4,26 @@ import { join } from "path";
 
 const clientPath = join(import.meta.dir, "play.pokemonshowdown.com");
 const port = process.env.PORT || 4000;
+const preactDevtools = process.env.PREACT_DEVTOOLS === "1";
+
+const devtoolsScripts = `<script src="js/lib/preact-devtools.umd.js"></script>
+	<script src="js/lib/preact-debug.umd.js"></script>`;
+
+async function serveBetaClient() {
+	const html = await Bun.file(join(clientPath, "testclient-beta.html")).text();
+	return new Response(
+		html.replace(
+			"<!-- __PREACT_DEVTOOLS__ -->",
+			preactDevtools ? devtoolsScripts : "",
+		),
+		{ headers: { "Content-Type": "text/html" } },
+	);
+}
 
 const app = new Elysia()
 	// Serve beta client at root
-	.get("/hellodex", () => Bun.file(join(clientPath, "testclient-beta.html")))
-	.get("/", () => Bun.file(join(clientPath, "testclient-beta.html")))
+	.get("/hellodex", () => serveBetaClient())
+	.get("/", () => serveBetaClient())
 
 	// Serve classic client at /classic
 	.get("/classic", () => Bun.file(join(clientPath, "testclient.html")))
@@ -114,7 +129,7 @@ const app = new Elysia()
 	// Serve the index for any unmatched routes (SPA fallback)
 	.onError(({ code }) => {
 		if (code === "NOT_FOUND") {
-			return Bun.file(join(clientPath, "testclient-beta.html"));
+			return serveBetaClient();
 		}
 	})
 
