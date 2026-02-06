@@ -320,8 +320,69 @@ export class BattleLog {
 				}
 				return buf;
 			}).join('');
-			divHTML = `<div class="infobox"><details class="details"><summary>Open team sheet for ${side.name}</summary>${exportedTeam}</details></div>`;
-			break;
+
+			// Generate OTS text for PokeBin upload (strips EVs/IVs/Nature)
+			const otsSets = team.map(set => {
+				const otsSet: Partial<Dex.PokemonSet> = {
+					species: set.species,
+					moves: set.moves,
+				};
+				if (set.name) otsSet.name = set.name;
+				if (set.item) otsSet.item = set.item;
+				if (set.ability) otsSet.ability = set.ability;
+				if (set.gender) otsSet.gender = set.gender;
+				if (set.level) otsSet.level = set.level;
+				if (set.shiny) otsSet.shiny = set.shiny;
+				if (set.teraType) otsSet.teraType = set.teraType;
+				if (set.gigantamax) otsSet.gigantamax = set.gigantamax;
+				if (set.dynamaxLevel) otsSet.dynamaxLevel = set.dynamaxLevel;
+				if (set.pokeball) otsSet.pokeball = set.pokeball;
+				if (set.hpType) otsSet.hpType = set.hpType;
+				if (typeof set.happiness === 'number') otsSet.happiness = set.happiness;
+				return otsSet as Dex.PokemonSet;
+			});
+			const otsContent = Teams.export(otsSets, battle.dex).trim();
+			const pokebinButtonHtml = `<button class="button pokebinOtsUpload" style="margin-top:4px"><i class="fa fa-upload"></i> Upload to PokeBin</button>`;
+
+			const el = document.createElement('div');
+			el.className = divClass;
+			el.innerHTML = `<div class="infobox"><details class="details"><summary>Open team sheet for ${side.name}</summary>${pokebinButtonHtml}<br />${exportedTeam}</details></div>`;
+
+			const pokebinBtn = el.querySelector('.pokebinOtsUpload') as HTMLButtonElement | null;
+			pokebinBtn?.addEventListener('click', e => {
+				e.preventDefault();
+				const author = side.name;
+				const format = battle.tier || '';
+				const baseData = {
+					title: `${author}'s OTS`,
+					author,
+					format,
+					rental: '',
+					notes: '',
+					content: otsContent,
+				};
+				const formData = { encrypted: false, data: baseData };
+				const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(formData))));
+
+				const form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'https://pokebin.com/create';
+				form.target = '_blank';
+
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'data';
+				input.value = encoded;
+				form.appendChild(input);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			});
+
+			this.addNode(el, preempt);
+			this.joinLeave = null;
+			return;
 		}
 
 		case 'seed': case 'choice': case ':': case 'timer': case 't:':
