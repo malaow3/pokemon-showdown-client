@@ -24,7 +24,7 @@
 					<h3 class="mini-window-header"><button class="closebutton" tabindex="-1" aria-label="Close"><i class="fa fa-times-circle"></i></button>News</h3>
 					<div id="room-news" class="mini-window-contents ps-room-light scrollable" style="height: auto;">
 						<div class="readable-bg">
-							<div class="newsentry"><h4>Test client</h4><p>Welcome to the test client! You can test client changes here!</p><p>&mdash;<strong>Zarel</strong> <small class="date">on Sep 25, 2015</small></p></div>
+							<!-- <div class="newsentry"><h4>Test client</h4><p>Welcome to the test client! You can test client changes here!</p><p>&mdash;<strong>Zarel</strong> <small class="date">on Sep 25, 2015</small></p></div> -->
 						</div>
 					</div>
 				</div>
@@ -95,6 +95,33 @@
 					alert('Unrecognised query string syntax: ' + location.search);
 				}
 			}
+		})();
+	</script>
+	<script>
+		(function () {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'https://pokemonshowdown.com/news.json', false);
+			try {
+				xhr.send();
+				if (xhr.status === 200) {
+					var data = JSON.parse(xhr.responseText);
+					var html = '';
+					for (var i = 0; i < 2 && i < data.length; i++) {
+						var post = data[i];
+						html += '<div class="newsentry">';
+						if (post.title) html += '<h4>' + post.title + '</h4>';
+						if (post.summaryHTML) html += '<p>' + post.summaryHTML + '</p>';
+						html += '<p>';
+						if (post.author) html += '&mdash;<strong>' + post.author + '</strong>';
+						if (post.date) {
+							html += ' <small class="date">on ' + new Date(post.date * 1000).toDateString() + '</small>';
+						}
+						html += '</p></div>';
+					}
+					var el = document.querySelector('#room-news .readable-bg');
+					if (el) el.innerHTML = html;
+				}
+			} catch (e) {}
 		})();
 	</script>
 	<script nomodule src="/js/lib/ps-polyfill.js"></script>

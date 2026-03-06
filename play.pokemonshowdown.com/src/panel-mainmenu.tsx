@@ -486,7 +486,7 @@ class NewsPanel extends PSRoomPanel {
 	change = (ev: Event) => {
 		const target = ev.currentTarget as HTMLInputElement;
 		if (target.value === '1') {
-			document.cookie = "preactalpha=1; expires=Thu, 1 Jul 2026 12:00:00 UTC; path=/";
+			document.cookie = "preactalpha=1; expires=Thu, 1 Jun 2026 12:00:00 UTC; path=/";
 		} else {
 			document.cookie = "preactalpha=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 		}
@@ -496,8 +496,8 @@ class NewsPanel extends PSRoomPanel {
 	};
 	override render() {
 		const cookieSet = document.cookie.includes('preactalpha=1');
-		return <PSPanelWrapper room={this.props.room} fullSize>
-			<div class="construction">
+		return <PSPanelWrapper room={this.props.room} fullSize scrollable>
+			{/* <div class="construction">
 				This is the client rewrite beta test.
 				<form>
 					<label class="checkbox">
@@ -514,7 +514,7 @@ class NewsPanel extends PSRoomPanel {
 					</label>
 				</form>
 				Provide feedback in <a href="development" style="color:black">the Dev chatroom</a>.
-			</div>
+			</div> */}
 			<div class="readable-bg" dangerouslySetInnerHTML={{ __html: PS.newsHTML }}></div>
 		</PSPanelWrapper>;
 	}
