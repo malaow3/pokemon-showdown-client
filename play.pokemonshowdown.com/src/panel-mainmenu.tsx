@@ -557,48 +557,48 @@ class NewsPanel extends PSRoomPanel {
     const cookieSet = document.cookie.includes("preactalpha=1");
     return (
       <PSPanelWrapper room={this.props.room} fullSize scrollable>
-        <div class="construction">
-          This is the client rewrite beta test.
-          <form>
-            <label class="checkbox">
-              <input
-                type="radio"
-                name="preactalpha"
-                value="1"
-                onChange={this.change}
-                checked={cookieSet}
-              />{" "}
-              {}
-              Use Rewrite always
-            </label>
-            <label class="checkbox">
-              <input
-                type="radio"
-                name="preactalpha"
-                value="0"
-                onChange={this.change}
-                checked={!cookieSet}
-              />{" "}
-              {}
-              Use Rewrite with URL
-            </label>
-            <label class="checkbox">
-              <input
-                type="radio"
-                name="preactalpha"
-                value="leave"
-                onChange={this.change}
-              />{" "}
-              {}
-              Back to the old client
-            </label>
-          </form>
-          Provide feedback in{" "}
-          <a href="development" style="color:black">
-            the Dev chatroom
-          </a>
-          .
-        </div>
+        {/* <div class="construction"> */}
+        {/*   This is the client rewrite beta test. */}
+        {/*   <form> */}
+        {/*     <label class="checkbox"> */}
+        {/*       <input */}
+        {/*         type="radio" */}
+        {/*         name="preactalpha" */}
+        {/*         value="1" */}
+        {/*         onChange={this.change} */}
+        {/*         checked={cookieSet} */}
+        {/*       />{" "} */}
+        {/*       {} */}
+        {/*       Use Rewrite always */}
+        {/*     </label> */}
+        {/*     <label class="checkbox"> */}
+        {/*       <input */}
+        {/*         type="radio" */}
+        {/*         name="preactalpha" */}
+        {/*         value="0" */}
+        {/*         onChange={this.change} */}
+        {/*         checked={!cookieSet} */}
+        {/*       />{" "} */}
+        {/*       {} */}
+        {/*       Use Rewrite with URL */}
+        {/*     </label> */}
+        {/*     <label class="checkbox"> */}
+        {/*       <input */}
+        {/*         type="radio" */}
+        {/*         name="preactalpha" */}
+        {/*         value="leave" */}
+        {/*         onChange={this.change} */}
+        {/*       />{" "} */}
+        {/*       {} */}
+        {/*       Back to the old client */}
+        {/*     </label> */}
+        {/*   </form> */}
+        {/*   Provide feedback in{" "} */}
+        {/*   <a href="development" style="color:black"> */}
+        {/*     the Dev chatroom */}
+        {/*   </a> */}
+        {/*   . */}
+        {/* </div> */}
         <div
           class="readable-bg"
           dangerouslySetInnerHTML={{ __html: PS.newsHTML }}
