@@ -364,7 +364,12 @@ class BattlePanel extends PSRoomPanel<BattleRoom> {
 		if (PS.prefs.autohardcore) {
 			battle.setHardcoreMode(true);
 		}
-		battle.subscribe(() => this.forceUpdate());
+		battle.subscribe(state => {
+			if (state === 'ended' && PS.prefs.autosavereplay && room.battle.mySide.id === PS.user.userid) {
+				this.send('/savereplay silent');
+			}
+			this.forceUpdate();
+		});
 	}
 	battleHeight = 360;
 	updateLayout() {

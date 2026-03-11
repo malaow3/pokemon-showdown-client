@@ -1563,6 +1563,10 @@ class BattleOptionsPanel extends PSRoomPanel {
 			}
 			break;
 		}
+		case 'autosavereplay': {
+			PS.prefs.set('autosavereplay', value);
+			break;
+		}
 		case 'autohardcore': {
 			PS.prefs.set('autohardcore', value);
 			if (room?.battle) {
@@ -1682,6 +1686,14 @@ class BattleOptionsPanel extends PSRoomPanel {
 						name="autotimer" checked={PS.prefs.autotimer || false}
 						type="checkbox" onChange={this.handleAllSettings}
 					/> Automatically start timer
+				</label>
+			</p>
+			<p>
+				<label class="checkbox">
+					<input
+						name="autosavereplay" checked={PS.prefs.autosavereplay || false}
+						type="checkbox" onChange={this.handleAllSettings}
+					/> Automatically save replays
 				</label>
 			</p>
 			<p>

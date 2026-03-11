@@ -472,10 +472,213 @@ export class MainMenuRoom extends PSRoom {
 				}
 			}
 			break;
+		case 'savereplay': {
+			const replayid = response.id;
+			const serverid = Config.server.id && toID(Config.server.id.split(':')[0]);
+			const fullReplayId = (serverid && serverid !== 'showdown') ? `${serverid}-${replayid}` : replayid;
+			PSLoginServer.rawQuery('uploadreplay', {
+				log: response.log,
+				serverid: serverid || '',
+				password: response.password || '',
+				id: fullReplayId,
+			}).then(result => {
+				if (response.silent) return;
+				if (!result) return;
+				const parts = result.split(':');
+				if (parts[0] === 'success') {
+					PS.alert(`Replay saved! https://${Config.routes.replays}/${parts[1] || fullReplayId}`);
+				} else if (result === 'hash mismatch') {
+					PS.alert("Someone else is already uploading a replay of this battle. Try again in five seconds.");
+				} else if (result === 'not found') {
+					PS.alert("This server isn't registered, and doesn't support uploading replays.");
+				} else if (result === 'invalid id') {
+					PS.alert("This server is using invalid battle IDs, so this replay can't be uploaded.");
+				} else {
+					PS.alert(`Error while uploading replay: ${result}`);
+				}
+			});
+			break;
+		}
 		}
 		for (const callback of this.listeners[fullid] || []) callback(response);
 		delete this.listeners[fullid];
 	}
+%%%%%%% diff from: nruvuypm 75ecb444 "Add news fetching to clients" (rebased revision)
+\\\\\\\        to: kkznzmzw a435d752 "Add auto-replay saving" (rebased revision)
+     // Match base formats to their variants, if they are unavailable in the server.
+     let multivariantFormats: { [id: string]: 1 } = {};
+     for (let id in BattleFormats) {
+       let teambuilderFormat =
+         BattleFormats[BattleFormats[id].teambuilderFormat!];
+       if (!teambuilderFormat || multivariantFormats[teambuilderFormat.id])
+         continue;
+       if (
+         !teambuilderFormat.searchShow &&
+         !teambuilderFormat.challengeShow &&
+         !teambuilderFormat.tournamentShow
+       ) {
+         // The base format is not available.
+         if (teambuilderFormat.battleFormat) {
+           multivariantFormats[teambuilderFormat.id] = 1;
+           teambuilderFormat.battleFormat = "";
+         } else {
+           teambuilderFormat.battleFormat = id;
+         }
+       }
+     }
+     PS.teams.update("format");
+   }
+   handlePM(user1: string, user2: string, message?: string) {
+     const userid1 = toID(user1);
+     const userid2 = toID(user2);
+     const pmTarget = PS.user.userid === userid1 ? user2 : user1;
+     const pmTargetid = PS.user.userid === userid1 ? userid2 : userid1;
+     let roomid = `dm-${pmTargetid}` as RoomID;
+     if (pmTargetid === PS.user.userid) roomid = "dm-" as RoomID;
+     let room = PS.rooms[roomid] as ChatRoom | undefined;
+     if (!room) {
+       PS.addRoom({
+         id: roomid,
+         args: { pmTarget },
+         autofocus: false,
+       });
+       room = PS.rooms[roomid] as ChatRoom;
+     } else {
+       room.updateTarget(pmTarget);
+     }
+     if (message) room.receiveLine([`c`, user1, message]);
+     PS.update();
+   }
+   /**
+    * Client-to-server query. Handles `/crq` aka `/cmd`.
+    *
+    * Most queries are still handled hardcoded, so this is only for certain
+    * special queries that need a Promise.
+    */
+   makeQuery(id: string, param?: string) {
+     let fullid = id;
+     if (param) fullid += ` ${toID(param)}`;
+     return new Promise<any>((resolve) => {
+       if (!this.listeners[fullid]) {
+         this.listeners[fullid] = [];
+         PS.send(`/cmd ${id} ${param || ""}`);
+       }
+       this.listeners[fullid]!.push(resolve);
+     });
+   }
+   handleQueryResponse(id: ID, response: any) {
+     let fullid: string = id;
+     switch (id) {
+       case "userdetails":
+         let userid = response.userid;
+         fullid += ` ${userid}`;
+         let userdetails = this.userdetailsCache[userid];
+         if (!userdetails) {
+           this.userdetailsCache[userid] = response;
+         } else {
+           Object.assign(userdetails, response);
+         }
+         PS.rooms[`user-${userid}`]?.update(null);
+         PS.rooms[`viewuser-${userid}`]?.update(null);
+         PS.rooms[`users`]?.update(null);
+         break;
+       case "rooms":
+         if (response.pspl) {
+           for (const roomInfo of response.pspl)
+             roomInfo.spotlight = "Spotlight";
+           response.chat = [...response.pspl, ...response.chat];
+           response.pspl = null;
+         }
+         if (response.official) {
+           for (const roomInfo of response.official)
+             roomInfo.section = "Official";
+           response.chat = [...response.official, ...response.chat];
+           response.official = null;
+         }
+         this.roomsCache = response;
+         const roomsRoom = PS.rooms[`rooms`] as RoomsRoom;
+         if (roomsRoom) roomsRoom.update(null);
+         break;
+       case "roomlist":
+         const battlesRoom = PS.rooms[`battles`] as BattlesRoom;
+         if (battlesRoom) {
+           const battleTable = response.rooms;
+           const battles = [];
+           for (const battleid in battleTable) {
+             battleTable[battleid].id = battleid;
+             battles.push(battleTable[battleid]);
+           }
+           battlesRoom.battles = battles;
+           battlesRoom.update(null);
+         }
+         break;
+       case "laddertop":
+         for (const [roomid, ladderRoom] of Object.entries(PS.rooms)) {
+           if (roomid.startsWith("ladder-")) {
+             (ladderRoom as LadderFormatRoom).update(response);
+           }
+         }
+         break;
+       case "teamupload":
+         if (PS.teams.uploading) {
+           const team = PS.teams.uploading;
+           team.uploaded = {
+             teamid: response.teamid,
+             notLoaded: false,
+             private: response.private,
+           };
+           PS.rooms[`team-${team.key}`]?.update(null);
+           PS.rooms.teambuilder?.update(null);
+           PS.teams.uploading = null;
+         }
+         break;
+       case "teamupdate":
+         for (const team of PS.teams.list) {
+           if (team.teamid === response.teamid) {
+             team.uploaded = {
+               teamid: response.teamid,
+               notLoaded: false,
+               private: response.private,
+             };
+             PS.rooms[`team-${team.key}`]?.update(null);
+             PS.rooms.teambuilder?.update(null);
+             PS.teams.uploading = null;
+             break;
+           }
+         }
+         break;
++      case "savereplay": {
++        const replayid = response.id;
++        const serverid = Config.server.id && toID(Config.server.id.split(':')[0]);
++        const fullid = (serverid && serverid !== 'showdown') ? serverid + '-' + replayid : replayid;
++        PSLoginServer.rawQuery('uploadreplay', {
++          log: response.log,
++          serverid: serverid || '',
++          password: response.password || '',
++          id: fullid,
++        }).then(result => {
++          if (response.silent) return;
++          if (!result) return;
++          const parts = result.split(':');
++          if (parts[0] === 'success') {
++            PS.alert(`Replay saved! https://${Config.routes.replays}/${parts[1] || fullid}`);
++          } else if (result === 'hash mismatch') {
++            PS.alert("Someone else is already uploading a replay of this battle. Try again in five seconds.");
++          } else if (result === 'not found') {
++            PS.alert("This server isn't registered, and doesn't support uploading replays.");
++          } else if (result === 'invalid id') {
++            PS.alert("This server is using invalid battle IDs, so this replay can't be uploaded.");
++          } else {
++            PS.alert("Error while uploading replay: " + result);
++          }
++        });
++        break;
++      }
+     }
+     for (const callback of this.listeners[fullid] || []) callback(response);
+     delete this.listeners[fullid];
+   }
+>>>>>>> conflict 1 of 1 ends
 }
 
 class NewsPanel extends PSRoomPanel {
