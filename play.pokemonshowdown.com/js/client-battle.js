@@ -219,8 +219,11 @@
 					}
 				} else if (logLine.substr(0, 7) === '|title|') {
 					// empty
-				} else if (logLine.substr(0, 5) === '|win|' || logLine === '|tie') {
+				} else if (logLine.substr(0, 5) === '|win|' || logLine === '|tie' || logLine.substr(0, 14) === '|prematureend') {
 					this.battleEnded = true;
+					if (Storage.prefs('autosavereplay') && this.side) {
+						this.send('/savereplay silent');
+					}
 					this.battle.stepQueue.push(logLine);
 				} else if (logLine.substr(0, 6) === '|chat|' || logLine.substr(0, 3) === '|c|' || logLine.substr(0, 4) === '|c:|' || logLine.substr(0, 9) === '|chatmsg|' || logLine.substr(0, 10) === '|inactive|') {
 					this.battle.instantAdd(logLine);
@@ -1618,6 +1621,7 @@
 			buf += '<p><label class="checkbox"><input type="checkbox" name="allignorespects"' + (Dex.prefs('ignorespects') ? ' checked' : '') + '/> Ignore spectators</label></p>';
 			buf += '<p><label class="checkbox"><input type="checkbox" name="allignoreopp"' + (Dex.prefs('ignoreopp') ? ' checked' : '') + '/> Ignore opponent</label></p>';
 			buf += '<p><label class="checkbox"><input type="checkbox" name="autotimer"' + (Dex.prefs('autotimer') ? ' checked' : '') + '/> Automatically start timer</label></p>';
+			buf += '<p><label class="checkbox"><input type="checkbox" name="autosavereplay"' + (Dex.prefs('autosavereplay') ? ' checked' : '') + '/> Automatically save replays</label></p>';
 			if (rightPanelBattlesPossible) buf += '<p><label class="checkbox"><input type="checkbox" name="rightpanelbattles"' + (Dex.prefs('rightpanelbattles') ? ' checked' : '') + ' /> Open new battles on the right side</label></p>';
 			buf += '<p><button name="close" class="button">Done</button></p>';
 			this.$el.html(buf);
@@ -1630,6 +1634,7 @@
 			'change input[name=allignorespects]': 'toggleAllIgnoreSpects',
 			'change input[name=allignoreopp]': 'toggleAllIgnoreOpponent',
 			'change input[name=autotimer]': 'toggleAutoTimer',
+			'change input[name=autosavereplay]': 'toggleAutoSaveReplay',
 			'change input[name=rightpanelbattles]': 'toggleRightPanelBattles'
 		},
 		toggleHardcoreMode: function (e) {
@@ -1679,6 +1684,9 @@
 				this.room.setTimer('on');
 				this.room.autoTimerActivated = true;
 			}
+		},
+		toggleAutoSaveReplay: function (e) {
+			Storage.prefs('autosavereplay', !!e.currentTarget.checked);
 		},
 		toggleRightPanelBattles: function (e) {
 			Storage.prefs('rightpanelbattles', !!e.currentTarget.checked);

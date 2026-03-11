@@ -529,6 +529,33 @@ export class MainMenuRoom extends PSRoom {
           }
         }
         break;
+      case "savereplay": {
+        const replayid = response.id;
+        const serverid = Config.server.id && toID(Config.server.id.split(':')[0]);
+        const fullid = (serverid && serverid !== 'showdown') ? serverid + '-' + replayid : replayid;
+        PSLoginServer.rawQuery('uploadreplay', {
+          log: response.log,
+          serverid: serverid || '',
+          password: response.password || '',
+          id: fullid,
+        }).then(result => {
+          if (response.silent) return;
+          if (!result) return;
+          const parts = result.split(':');
+          if (parts[0] === 'success') {
+            PS.alert(`Replay saved! https://${Config.routes.replays}/${parts[1] || fullid}`);
+          } else if (result === 'hash mismatch') {
+            PS.alert("Someone else is already uploading a replay of this battle. Try again in five seconds.");
+          } else if (result === 'not found') {
+            PS.alert("This server isn't registered, and doesn't support uploading replays.");
+          } else if (result === 'invalid id') {
+            PS.alert("This server is using invalid battle IDs, so this replay can't be uploaded.");
+          } else {
+            PS.alert("Error while uploading replay: " + result);
+          }
+        });
+        break;
+      }
     }
     for (const callback of this.listeners[fullid] || []) callback(response);
     delete this.listeners[fullid];
