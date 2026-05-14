@@ -24,8 +24,23 @@
 			'click button[name=partnersubmit]': 'selectTeammate',
 			'click button[name=beta]': 'beta'
 		},
+		getBetaClientURL: function() {
+			var location = window.location;
+			var isLocalTestServer = /^(?:localhost|127\.0\.0\.1)$/.test(location.hostname) || !!location.port;
+			var path = location.pathname;
+			if (path.endsWith('/testclient.html')) {
+				path = path.replace(/testclient\.html$/, 'testclient-beta.html');
+			} else if (isLocalTestServer) {
+				path = '/';
+			} else if (path === '/') {
+				path = '/beta';
+			} else if (!path.startsWith('/beta/')) {
+				path = '/beta' + path;
+			}
+			return location.protocol + '//' + location.host + path + location.search + location.hash;
+		},
 		beta: function() {
-			window.location = "/"
+			window.location.href = this.getBetaClientURL();
 		},
 		initialize: function() {
 			this.$el.addClass('scrollable');
@@ -66,7 +81,7 @@
 			buf += '<p><button class="button mainmenu5 onlineonly disabled" name="finduser">Find a user</button></p>';
 			buf += '<p><button class="button mainmenu6 onlineonly disabled" name="send" value="/friends">Friends</button></p>';
 			buf += '<p><button class="button mainmenu7" name="joinRoom" value="resources">Info & Resources</button></p>';
-			buf += '<p><button class="button mainmenu8" name="beta">Swap to Beta client</button></p></div>';
+			buf += '<p><button class="button mainmenu7" name="beta">Swap to Beta client</button></p></div>';
 
 			this.$('.mainmenu').html(buf);
 

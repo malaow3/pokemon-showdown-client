@@ -1,142 +1,109 @@
-import { Elysia } from "elysia";
-import { staticPlugin } from "@elysiajs/static";
-import { join } from "path";
+// Pokémon Showdown client dev server.
+// Run with: deno run --allow-net --allow-read --allow-env server.ts
 
-const clientPath = join(import.meta.dir, "play.pokemonshowdown.com");
-const port = process.env.PORT || 4000;
-const preactDevtools = process.env.PREACT_DEVTOOLS === "1";
+import { serveDir, serveFile } from "jsr:@std/http/file-server";
+import { join, fromFileUrl } from "jsr:@std/path";
+
+const clientPath = join(fromFileUrl(new URL(".", import.meta.url)), "play.pokemonshowdown.com");
+const port = Number(Deno.env.get("PORT")) || 4000;
+const preactDevtools = Deno.env.get("PREACT_DEVTOOLS") === "1";
 
 const devtoolsScripts = `<script src="js/lib/preact-devtools.umd.js"></script>
 	<script src="js/lib/preact-debug.umd.js"></script>`;
 
-async function serveBetaClient() {
-	const html = await Bun.file(join(clientPath, "testclient-beta.html")).text();
+async function serveBetaClient(): Promise<Response> {
+	const html = await Deno.readTextFile(join(clientPath, "testclient-beta.html"));
 	return new Response(
-		html.replace(
-			"<!-- __PREACT_DEVTOOLS__ -->",
-			preactDevtools ? devtoolsScripts : "",
-		),
-		{ headers: { "Content-Type": "text/html" } },
+		html.replace("<!-- __PREACT_DEVTOOLS__ -->", preactDevtools ? devtoolsScripts : ""),
+		{ headers: { "Content-Type": "text/html; charset=utf-8" } },
 	);
 }
 
-const app = new Elysia()
-	// Serve beta client at root
-	.get("/hellodex", () => serveBetaClient())
-	.get("/", () => serveBetaClient())
+async function proxyGet(upstream: string): Promise<Response> {
+	const r = await fetch(upstream);
+	if (!r.ok) return new Response("", { status: r.status });
+	const contentType = r.headers.get("content-type") || "application/javascript";
+	return new Response(r.body, { headers: { "Content-Type": contentType } });
+}
 
-	// Serve classic client at /classic
-	.get("/classic", () => Bun.file(join(clientPath, "testclient.html")))
+async function handleLoginProxy(req: Request, url: URL): Promise<Response> {
+	const serverId = url.searchParams.get("serverid") || "showdown";
+	const targetUrl = `https://play.pokemonshowdown.com/~~${serverId}/action.php`;
+	try {
+		const cookieHeader = req.headers.get("cookie") || "";
+		const upstream = await fetch(targetUrl, {
+			method: "POST",
+			headers: {
+				"Content-Type": req.headers.get("content-type") || "application/x-www-form-urlencoded",
+				"Cookie": cookieHeader,
+			},
+			body: await req.arrayBuffer(),
+		});
 
-	// Proxy missing data/config files to play.pokemonshowdown.com
-	.get("/data/*", async ({ params, set }) => {
-		const file = params["*"];
-		const response = await fetch(`https://play.pokemonshowdown.com/data/${file}`);
-		if (!response.ok) {
-			set.status = response.status;
-			return "";
+		const text = await upstream.text();
+		const headers = new Headers({ "Content-Type": "text/plain; charset=utf-8" });
+
+		const setCookieHeaders = upstream.headers.getSetCookie?.() ?? [];
+		for (const c of setCookieHeaders) {
+			const rewritten = c
+				.replace(/;\s*domain=[^;]*/gi, "")
+				.replace(/;\s*secure/gi, "; Secure") + "; SameSite=Lax";
+			headers.append("Set-Cookie", rewritten);
 		}
-		set.headers["content-type"] = response.headers.get("content-type") || "application/javascript";
-		return response.text();
-	})
-	.get("/js/server/*", async ({ params, set }) => {
-		const file = params["*"];
-		const response = await fetch(`https://play.pokemonshowdown.com/js/server/${file}`);
-		if (!response.ok) {
-			set.status = response.status;
-			return "";
+		return new Response(text, { headers });
+	} catch (err) {
+		console.error("Login server proxy error:", err);
+		return new Response("", { status: 500 });
+	}
+}
+
+Deno.serve({ port }, async (req) => {
+	const url = new URL(req.url);
+	const { pathname } = url;
+
+	try {
+		if (req.method === "POST" && pathname === "/api/loginserver") {
+			return await handleLoginProxy(req, url);
 		}
-		set.headers["content-type"] = response.headers.get("content-type") || "application/javascript";
-		return response.text();
-	})
-	.get("/config/*", async ({ params, set }) => {
-		const file = params["*"];
-		// Don't proxy testclient-key.js - return empty to avoid errors
-		if (file === "testclient-key.js") {
-			set.headers["content-type"] = "application/javascript";
-			return "// No testclient key configured";
+
+		if (req.method !== "GET" && req.method !== "HEAD") {
+			return new Response(null, { status: 405 });
 		}
-		const response = await fetch(`https://play.pokemonshowdown.com/config/${file}`);
-		if (!response.ok) {
-			set.status = response.status;
-			return "";
+
+		if (pathname === "/" || pathname === "/hellodex") {
+			return await serveBetaClient();
 		}
-		set.headers["content-type"] = response.headers.get("content-type") || "application/javascript";
-		return response.text();
-	})
+		if (pathname === "/classic") {
+			return await serveFile(req, join(clientPath, "testclient.html"));
+		}
 
-	// Login server proxy to avoid CORS issues
-	.post("/api/loginserver", async ({ query, request, cookie, set }) => {
-		const serverId = query.serverid || "showdown";
-		const targetUrl = `https://play.pokemonshowdown.com/~~${serverId}/action.php`;
-
-		try {
-			const formData = await request.formData();
-			const body = new URLSearchParams();
-			for (const [key, value] of formData.entries()) {
-				body.append(key, value.toString());
-			}
-
-			// Forward cookies from client to login server
-			const cookieHeader = request.headers.get("cookie") || "";
-			
-			const response = await fetch(targetUrl, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					"Cookie": cookieHeader,
-				},
-				body: body.toString(),
-			});
-
-			const text = await response.text();
-			
-			// Forward Set-Cookie headers from login server to client
-			// Use getSetCookie() if available (modern), otherwise fall back to getAll
-			const setCookieHeaders: string[] = typeof response.headers.getSetCookie === 'function' 
-				? response.headers.getSetCookie()
-				: (response.headers as any).getAll?.("set-cookie") || [];
-			
-			if (setCookieHeaders.length > 0) {
-				// Rewrite cookies to work on current domain
-				const rewrittenCookies = setCookieHeaders.map((cookieStr: string) => {
-					// Remove domain restriction so cookie works on proxy domain
-					return cookieStr
-						.replace(/;\s*domain=[^;]*/gi, "")
-						.replace(/;\s*secure/gi, "; Secure")
-						+ "; SameSite=Lax";
+		if (pathname.startsWith("/data/") || pathname.startsWith("/js/server/") || pathname === "/js/battledata.js") {
+			return await proxyGet(`https://play.pokemonshowdown.com${pathname}`);
+		}
+		if (pathname.startsWith("/config/")) {
+			if (pathname === "/config/testclient-key.js") {
+				return new Response("// No testclient key configured", {
+					headers: { "Content-Type": "application/javascript" },
 				});
-				set.headers["set-cookie"] = rewrittenCookies;
 			}
-			
-			return new Response(text, {
-				headers: { "Content-Type": "text/plain" },
-			});
-		} catch (error) {
-			console.error("Login server proxy error:", error);
-			return new Response("", { status: 500 });
+			return await proxyGet(`https://play.pokemonshowdown.com${pathname}`);
 		}
-	})
 
-	// Serve static assets from play.pokemonshowdown.com directory
-	.use(
-		staticPlugin({
-			assets: clientPath,
-			prefix: "/",
-		})
-	)
+		// Static file under clientPath
+		const fileResp = await serveDir(req, {
+			fsRoot: clientPath,
+			quiet: true,
+		});
+		if (fileResp.status !== 404) return fileResp;
 
-	// Serve the index for any unmatched routes (SPA fallback)
-	.onError(({ code }) => {
-		if (code === "NOT_FOUND") {
-			return serveBetaClient();
-		}
-	})
+		// SPA fallback
+		return await serveBetaClient();
+	} catch (err) {
+		console.error("Request error:", err);
+		return new Response("", { status: 500 });
+	}
+});
 
-	.listen(port);
-
-console.log(
-	`Pokemon Showdown client running at http://localhost:${app.server?.port}`
-);
-console.log(`  - Beta client: http://localhost:${app.server?.port}/`);
-console.log(`  - Classic client: http://localhost:${app.server?.port}/classic`);
+console.log(`Pokemon Showdown client running at http://localhost:${port}`);
+console.log(`  - Beta client: http://localhost:${port}/`);
+console.log(`  - Classic client: http://localhost:${port}/classic`);

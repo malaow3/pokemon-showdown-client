@@ -48,6 +48,14 @@
 		linkStyle("style/teambuilder.css");
 		linkStyle("style/battle-search.css");
 		linkStyle("style/font-awesome.css");
+		(function () {
+			var linkEl = document.createElement('link');
+			linkEl.id = 'custom-theme-css';
+			linkEl.rel = 'stylesheet';
+			linkEl.href = 'style/custom-theme.css';
+			linkEl.disabled = true;
+			document.head.appendChild(linkEl);
+		})();
 	</script>
 	<script src="https://play.pokemonshowdown.com/config/config.js"></script>
 	<script>

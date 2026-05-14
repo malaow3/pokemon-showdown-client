@@ -2004,14 +2004,19 @@ export class BattleTooltips {
 			foeActive = [...foeActive, ...pokemon.side.active].filter(active => active !== pokemon);
 		}
 
+		const multiTarget = foeActive.filter(t => t && !t.fainted).length > 1;
 		let tags = '';
 		for (const possibleTarget of foeActive) {
-			if (!possibleTarget) continue;
+			if (!possibleTarget || possibleTarget.fainted) {
+				if (multiTarget) tags += ` `;
+				continue;
+			}
 			const effectiveness = this.getMoveEffectiveness(pokemon, move, moveType, category, possibleTarget);
 
 			if (effectiveness === null) {
-				break;
-			} if (effectiveness === 0) {
+				if (multiTarget) tags += ` `;
+				continue;
+			} else if (effectiveness === 0) {
 				tags += `\u00D7`;
 			} else if (effectiveness < 0.5) {
 				tags += `\u25BC`;
@@ -2021,10 +2026,11 @@ export class BattleTooltips {
 				tags += `\u2605`;
 			} else if (effectiveness > 1) {
 				tags += `\u29BF`;
-			} else if (this.battle.hardcoreMode) {
+			} else if (this.battle.hardcoreMode || multiTarget) {
 				tags += `\u25CB`;
 			}
 		}
+		if (!multiTarget) tags = tags.trimEnd();
 
 		return [moveType, tags] as const;
 	}

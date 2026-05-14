@@ -634,6 +634,7 @@ class OptionsPanel extends PSRoomPanel {
 		case 'noselfhighlight':
 		case 'leavePopupRoom':
 		case 'inchatpm':
+		case 'customtheme':
 			PS.prefs.set(setting, value);
 			break;
 		}
@@ -704,6 +705,11 @@ class OptionsPanel extends PSRoomPanel {
 				<label class="checkbox"> <input
 					name="noanim" checked={PS.prefs.noanim || false} type="checkbox" onChange={this.handleOnChange}
 				/> Disable animations</label>
+			</p>
+			<p>
+				<label class="checkbox"> <input
+					name="customtheme" checked={PS.prefs.customtheme || false} type="checkbox" onChange={this.handleOnChange}
+				/> Custom theme (style/custom-theme.css)</label>
 			</p>
 			<p>
 				<label class="checkbox"><input

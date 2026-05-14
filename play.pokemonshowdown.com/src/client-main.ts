@@ -84,6 +84,10 @@ class PSPrefs extends PSStreamModel<string | null> {
 	 */
 	theme: 'light' | 'dark' | 'system' = 'light';
 	/**
+	 * Enables the optional user-supplied stylesheet at style/custom-theme.css.
+	 */
+	customtheme: boolean | null = null;
+	/**
 	 * Disables animated GIFs, but keeps other animations enabled.
 	 * Workaround for a Chrome 64 bug with GIFs.
 	 * true - Disable GIFs, will be automatically re-enabled if you

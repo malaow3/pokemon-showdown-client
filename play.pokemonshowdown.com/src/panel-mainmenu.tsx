@@ -552,6 +552,23 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 	static readonly routes = [''];
 	static readonly Model = MainMenuRoom;
 	static readonly icon = <i class="fa fa-home" aria-hidden></i>;
+	static getClassicClientURL() {
+		const location = window.location;
+		const isLocalTestServer = /^(?:localhost|127\.0\.0\.1)$/.test(location.hostname) || !!location.port;
+		let path = location.pathname;
+		if (path.endsWith('/testclient-beta.html')) {
+			path = path.replace(/testclient-beta\.html$/, 'testclient.html');
+		} else if (isLocalTestServer) {
+			path = '/classic';
+		} else if (path === '/beta') {
+			path = '/';
+		} else if (path.startsWith('/beta/')) {
+			path = path.slice(5);
+		} else {
+			path = '/';
+		}
+		return `${location.protocol}//${location.host}${path}${location.search}${location.hash}`;
+	}
 	override focus() {
 		this.base?.querySelector<HTMLButtonElement>('.formatselect')?.focus();
 	}
@@ -563,6 +580,11 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 			return;
 		}
 		PS.mainmenu.startSearch(format, team, ev.target as HTMLElement);
+	};
+	switchToClassicClient = (ev: Event) => {
+		ev.preventDefault();
+		ev.stopPropagation();
+		window.location.href = MainMenuPanel.getClassicClientURL();
 	};
 	handleDragStart = (e: DragEvent) => {
 		const room = PS.getRoom(e.currentTarget);
@@ -735,6 +757,9 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 						<p><a class={"mainmenu5 mainmenu" + onlineButton} href="users">Find a user</a></p>
 						<p><a class={"mainmenu6 mainmenu" + onlineButton} href="view-friends-all">Friends</a></p>
 						<p><a class={"mainmenu7 mainmenu" + onlineButton} href="resources">Info & Resources</a></p>
+						<p><button class="mainmenu7 mainmenu button" type="button" onClick={this.switchToClassicClient}>
+							Swap to Classic client
+						</button></p>
 					</div>
 				</div>
 				<div class="mainmenu-right" style={{ display: PS.leftPanelWidth ? 'none' : 'block' }}>

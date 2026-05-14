@@ -10,12 +10,14 @@
 		<link rel="stylesheet" href="style/sim-types.css" />
 		<link rel="stylesheet" href="style/utilichart.css" />
 		<link rel="stylesheet" href="style/font-awesome.css" />
+		<link id="custom-theme-css" rel="stylesheet" href="style/custom-theme.css" disabled />
 		<meta name="robots" content="noindex" />
 		<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 		<script src="https://play.pokemonshowdown.com/config/config.js"></script>
 		<script>
 			function loadRemoteData(src) {
 				var scriptEl = document.createElement("script");
+				scriptEl.async = false;
 				scriptEl.src = src.replace(
 					/.*\/(data|js)\//g,
 					"https://play.pokemonshowdown.com/$1/",
@@ -24,6 +26,7 @@
 			}
 			Config.testclient = true;
 			Config.loginServerProxy = "/api/loginserver";
+			Config.server = Config.defaultserver;
 			(function () {
 				if (location.search !== "") {
 					var m = /\?~~(([^:\/]*)(:[0-9]*)?)/.exec(location.search);
