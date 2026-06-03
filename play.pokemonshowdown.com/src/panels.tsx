@@ -659,7 +659,7 @@ export class PSView extends preact.Component {
 		const colorSchemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
 		if (colorSchemeQuery?.media !== 'not all') {
 			colorSchemeQuery.addEventListener('change', cs => {
-				if (PS.prefs.theme === 'system') document.body.className = cs.matches ? 'dark' : '';
+				if (PS.prefs.theme === 'system') document.body.classList.toggle('dark', cs.matches);
 			});
 		}
 
@@ -667,7 +667,11 @@ export class PSView extends preact.Component {
 			if (!key || key === 'theme') {
 				const dark = PS.prefs.theme === 'dark' ||
 					(PS.prefs.theme === 'system' && colorSchemeQuery?.matches);
-				document.body.className = dark ? 'dark' : '';
+				document.body.classList.toggle('dark', dark);
+			}
+			if (!key || key === 'customtheme') {
+				const link = document.getElementById('custom-theme-css') as HTMLLinkElement | null;
+				if (link) link.disabled = !PS.prefs.customtheme;
 			}
 		});
 	}

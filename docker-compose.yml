@@ -1,0 +1,8 @@
+services:
+  showdown-client:
+    image: ${DOCKER_IMAGE:-ghcr.io/owner/repository:latest}
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+    restart: unless-stopped
