@@ -1385,7 +1385,7 @@ class ChatPanel extends PSRoomPanel<ChatRoom> {
 		const packedTeam = team ? team.packedTeam : '';
 		if (!room.pmTarget) throw new Error("Not a PM room");
 		PS.send(`/utm ${packedTeam}`);
-		this.props.room.send(`/accept`);
+		PS.send(`/accept ${room.pmTarget}`);
 		room.teamSent = format || '-';
 		room.update(null);
 	};
