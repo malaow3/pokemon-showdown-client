@@ -1,0 +1,12 @@
+.git
+.jj
+.github
+node_modules
+caches
+*.log
+.env
+.env.*
+Dockerfile
+.dockerignore
+npm-debug.log*
+play.pokemonshowdown.com/js/lib/sockjs-*.min.js.map

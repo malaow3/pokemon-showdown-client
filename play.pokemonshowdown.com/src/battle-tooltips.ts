@@ -2033,41 +2033,33 @@ export class BattleTooltips {
 			foeActive = [...foeActive, ...pokemon.side.active].filter(active => active !== pokemon);
 		}
 
-		if (this.battle.hardcoreMode) {
-			let tags = '';
-			for (const possibleTarget of foeActive) {
-				if (!possibleTarget) continue;
-				const effectiveness = this.getMoveEffectiveness(pokemon, move, moveType, category, possibleTarget);
-
-				if (effectiveness === null) {
-					break;
-				} if (effectiveness === 0) {
-					tags += `\u00D7`;
-				} else if (effectiveness < 0.5) {
-					tags += `\u25BC`;
-				} else if (effectiveness < 1) {
-					tags += `\u25B3`;
-				} else if (effectiveness > 2) {
-					tags += `\u2605`;
-				} else if (effectiveness > 1) {
-					tags += `\u29BF`;
-				} else {
-					tags += `\u25CB`;
-				}
-			}
-
-			return [moveType, tags] as const;
-		}
-
-		let tags = '\u00D7';
+		const multiTarget = foeActive.filter(t => t && !t.fainted).length > 1;
+		let tags = '';
 		for (const possibleTarget of foeActive) {
-			if (!possibleTarget) continue;
+			if (!possibleTarget || possibleTarget.fainted) {
+				if (multiTarget) tags += ` `;
+				continue;
+			}
 			const effectiveness = this.getMoveEffectiveness(pokemon, move, moveType, category, possibleTarget);
-			if (effectiveness !== 0) {
-				tags = '';
-				break;
+
+			if (effectiveness === null) {
+				if (multiTarget) tags += ` `;
+				continue;
+			} else if (effectiveness === 0) {
+				tags += `\u00D7`;
+			} else if (effectiveness < 0.5) {
+				tags += `\u25BC`;
+			} else if (effectiveness < 1) {
+				tags += `\u25B3`;
+			} else if (effectiveness > 2) {
+				tags += `\u2605`;
+			} else if (effectiveness > 1) {
+				tags += `\u29BF`;
+			} else if (this.battle.hardcoreMode || multiTarget) {
+				tags += `\u25CB`;
 			}
 		}
+		if (!multiTarget) tags = tags.trimEnd();
 
 		return [moveType, tags] as const;
 	}
