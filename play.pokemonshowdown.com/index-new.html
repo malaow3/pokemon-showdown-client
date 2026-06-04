@@ -75,6 +75,14 @@ https://psim.us/dev
 		linkStyle("/style/utilichart.css?");
 		linkStyle("/style/battle-search.css?");
 		linkStyle("/style/font-awesome.css");
+		(function () {
+			var linkEl = document.createElement('link');
+			linkEl.id = 'custom-theme-css';
+			linkEl.rel = 'stylesheet';
+			linkEl.href = '/style/custom-theme.css';
+			linkEl.disabled = true;
+			document.head.appendChild(linkEl);
+		})();
 	</script>
 	<script nomodule defer src="/js/lib/ps-polyfill.js"></script>
 	<script>

@@ -480,6 +480,8 @@ function toId() {
 				var colorSchemeQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
 				var dark = theme === 'dark' || (theme === 'system' && colorSchemeQuery && colorSchemeQuery.matches);
 				$('html').toggleClass('dark', dark);
+				var customThemeEl = document.getElementById('custom-theme-css');
+				if (customThemeEl) customThemeEl.disabled = !Dex.prefs('customtheme');
 				if (colorSchemeQuery && colorSchemeQuery.media !== 'not all') {
 					colorSchemeQuery.addEventListener('change', function (cs) {
 						if (Dex.prefs('theme') === 'system') $('html').toggleClass('dark', cs.matches);
