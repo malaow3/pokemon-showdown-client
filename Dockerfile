@@ -20,8 +20,8 @@ COPY . .
 # Build the Pokemon Showdown client
 RUN npm run build
 
-# Production stage
-FROM denoland/deno:2.3.3
+# API/proxy stage
+FROM denoland/deno:2.3.3 AS deno-server
 
 WORKDIR /app
 
@@ -42,3 +42,11 @@ ENV PORT=4000
 
 # Run the server
 CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "server.ts"]
+
+# Static nginx stage
+FROM nginx:1.27-alpine AS nginx
+
+COPY --from=builder /app/play.pokemonshowdown.com /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

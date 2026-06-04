@@ -1,7 +1,7 @@
 // Pokémon Showdown client dev server.
 // Run with: deno run --allow-net --allow-read --allow-env server.ts
 
-import { serveDir, serveFile } from "jsr:@std/http/file-server";
+import { serveDir } from "jsr:@std/http/file-server";
 import { join, fromFileUrl } from "jsr:@std/path";
 
 const clientPath = join(fromFileUrl(new URL(".", import.meta.url)), "play.pokemonshowdown.com");
@@ -19,11 +19,35 @@ async function serveBetaClient(): Promise<Response> {
 	);
 }
 
+async function serveClassicClient(): Promise<Response> {
+	const html = await Deno.readTextFile(join(clientPath, "testclient-old.html"));
+	return new Response(
+		html
+			.replaceAll('href="style/', 'href="/style/')
+			.replaceAll('href="favicon.ico"', 'href="/favicon.ico"')
+			.replaceAll('src="pokemonshowdownbeta.png"', 'src="/pokemonshowdownbeta.png"')
+			.replaceAll('src="js/', 'src="/js/')
+			.replaceAll('src="data/', 'src="/data/'),
+		{ headers: { "Content-Type": "text/html; charset=utf-8" } },
+	);
+}
+
 async function proxyGet(upstream: string): Promise<Response> {
 	const r = await fetch(upstream);
 	if (!r.ok) return new Response("", { status: r.status });
 	const contentType = r.headers.get("content-type") || "application/javascript";
 	return new Response(r.body, { headers: { "Content-Type": contentType } });
+}
+
+async function serveOldClientSource(pathname: string): Promise<Response> {
+	let js = await Deno.readTextFile(join(clientPath, "src", "oldclient", pathname.slice("/js/oldclient/".length)));
+	if (pathname === "/js/oldclient/client.js") {
+		js = js.replace(
+			"\t\tgetActionPHP: function () {\n\t\t\tvar ret = '/~~' + Config.server.id + '/action.php';\n\t\t\tif (Config.testclient) {\n\t\t\t\tret = 'https://' + Config.routes.client + ret;\n\t\t\t}\n\t\t\treturn (this.getActionPHP = function () {\n\t\t\t\treturn ret;\n\t\t\t})();\n\t\t},\n",
+			"\t\tgetActionPHP: function () {\n\t\t\tvar ret = '/~~' + Config.server.id + '/action.php';\n\t\t\tif (Config.loginServerProxy) {\n\t\t\t\tret = Config.loginServerProxy + '?serverid=' + encodeURIComponent(Config.server.id);\n\t\t\t} else if (Config.testclient) {\n\t\t\t\tret = 'https://' + Config.routes.client + ret;\n\t\t\t}\n\t\t\treturn (this.getActionPHP = function () {\n\t\t\t\treturn ret;\n\t\t\t})();\n\t\t},\n",
+		);
+	}
+	return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8" } });
 }
 
 async function handleLoginProxy(req: Request, url: URL): Promise<Response> {
@@ -73,10 +97,13 @@ Deno.serve({ port }, async (req) => {
 		if (pathname === "/" || pathname === "/hellodex") {
 			return await serveBetaClient();
 		}
-		if (pathname === "/classic") {
-			return await serveFile(req, join(clientPath, "testclient.html"));
+		if (pathname === "/classic" || pathname === "/classic/") {
+			return await serveClassicClient();
 		}
 
+		if (pathname.startsWith("/js/oldclient/")) {
+			return await serveOldClientSource(pathname);
+		}
 		if (pathname.startsWith("/data/") || pathname.startsWith("/js/server/") || pathname === "/js/battledata.js") {
 			return await proxyGet(`https://play.pokemonshowdown.com${pathname}`);
 		}

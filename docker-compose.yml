@@ -1,8 +1,9 @@
 services:
-  showdown-client:
-    image: ${DOCKER_IMAGE:-ghcr.io/owner/repository:latest}
-    ports:
-      - "4000:4000"
-    environment:
-      - PORT=4000
+  web:
+    build:
+      context: .
+      target: nginx
+    image: ${DOCKER_IMAGE:-pokemon-showdown-client-nginx:latest}
+    network_mode: host
+    command: /bin/sh -c "sed -i 's/listen 80;/listen 4000;/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
     restart: unless-stopped

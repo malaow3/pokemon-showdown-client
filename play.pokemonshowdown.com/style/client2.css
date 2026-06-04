@@ -851,8 +851,10 @@ p.or:after {
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
 }
+.mini-window #room-news.mini-window-contents,
 .mini-window .mini-window-contents.mini-window-flex {
 	height: auto;
+	min-height: 0;
 }
 .mini-window-body {
 	min-height: 100px;

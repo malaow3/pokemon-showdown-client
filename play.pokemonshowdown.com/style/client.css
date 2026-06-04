@@ -764,6 +764,9 @@ p.or:after {
 .challenge p {
 	margin: 4px 0;
 }
+.news-embed .pm-log {
+	min-height: 0;
+}
 .newsentry {
 	font-size: 9pt;
 	padding: 1px 10px;
