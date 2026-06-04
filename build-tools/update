@@ -214,7 +214,34 @@ try {
 		stdio: 'pipe',
 	});
 } catch (e) {
-	console.log("git hook failed to retrieve news (exec command failed):\n" + (e.error + e.stderr + e.stdout));
+	console.log("git hook failed to retrieve news from PHP (exec command failed):\n" + (e.error + e.stderr + e.stdout));
+	try {
+		stdout = child_process.execFileSync(process.execPath, ['-e', `
+const https = require('https');
+function esc(s) { return ('' + (s || '')).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function readableDate(time) { return new Date(time * 1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles'}); }
+https.get('https://pokemonshowdown.com/news.json', res => {
+	let buf = '';
+	res.setEncoding('utf8');
+	res.on('data', chunk => { buf += chunk; });
+	res.on('end', () => {
+		const data = JSON.parse(buf);
+		let html = '';
+		for (const post of data.slice(0, 2)) {
+			html += '<div class="newsentry" data-newsid="' + esc(post.id) + '" data-date="' + esc(post.date) + '">';
+			if (post.title) html += '<h4>' + esc(post.title) + '</h4>';
+			if (post.summaryHTML) html += post.summaryHTML;
+			html += '<p>&mdash;<strong>' + esc(post.author) + '</strong> <small class="date">on ' + readableDate(post.date) + '</small>';
+			if (post.detailsHTML) html += ' <small><a href="http://pokemonshowdown.com/news/' + esc(post.id) + '" target="_blank">Read more</a></small>';
+			html += '</p></div>';
+		}
+		process.stdout.write(JSON.stringify([data[0]?.id || 0, html]));
+	});
+}).on('error', err => { throw err; });
+`], {stdio: 'pipe'});
+	} catch (e2) {
+		console.log("git hook failed to retrieve news from news.json:\n" + (e2.error + e2.stderr + e2.stdout));
+	}
 }
 try {
 	if (stdout) [newsid, news] = JSON.parse(stdout);

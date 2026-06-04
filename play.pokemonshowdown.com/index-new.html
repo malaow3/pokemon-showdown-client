@@ -77,6 +77,10 @@ https://psim.us/dev
 		linkStyle("/style/font-awesome.css");
 	</script>
 	<script nomodule defer src="/js/lib/ps-polyfill.js"></script>
+	<script>
+		var Config = window.Config = window.Config || {};
+		Config.loginServerProxy = '/api/loginserver';
+	</script>
 	<script defer src="/config/config.js?"></script>
 	<script defer src="/js/client-core.js?"></script>
 	<!-- At this point, background and dark mode are loaded -->
@@ -143,5 +147,33 @@ https://psim.us/dev
 	<script defer src="/data/commands.js?"></script>
 
 	<script defer src="/js/client-endload.js?"></script>
+	<script>
+		(function () {
+			var log = document.querySelector('#room-news .readable-bg');
+			if (!log) return;
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', '/news.json');
+			xhr.onload = function () {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					var html = '';
+					for (var i = 0; i < 2 && i < data.length; i++) {
+						var post = data[i];
+						html += '<div class="newsentry" data-newsid="' + (post.id || '') + '">';
+						if (post.title) html += '<h4>' + post.title + '</h4>';
+						if (post.summaryHTML) html += '<p>' + post.summaryHTML + '</p>';
+						html += '<p>';
+						if (post.author) html += '&mdash;<strong>' + post.author + '</strong>';
+						if (post.date) html += '<small class="date"> on ' + new Date(post.date * 1000).toDateString() + '</small>';
+						html += '</p></div>';
+					}
+					var roomNews = document.getElementById('room-news');
+					if (roomNews && data[0] && data[0].id) roomNews.setAttribute('data-newsid', data[0].id);
+					log.innerHTML = html;
+				} catch (e) {}
+			};
+			xhr.send();
+		})();
+	</script>
 
 </body></html>
