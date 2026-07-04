@@ -137,6 +137,9 @@ Header set Cache-Control "no-cache, no-store, must-revalidate" env=INDEX_PAGE
 Header set Pragma "no-cache" env=INDEX_PAGE
 Header set Expires "0" env=INDEX_PAGE
 
+# Crossprotocol cache page
+RewriteRule ^crossprotocol\.html$ ./caches/crossprotocol.html [L]
+
 # No direct linking to the lobby.
 # RewriteCond %{ENV:SCRIPT_URL} ^/(lobby/?)?$
 # RewriteCond %{HTTP_REFERER} !^$
