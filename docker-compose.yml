@@ -1,9 +1,12 @@
 services:
   web:
-    build:
-      context: .
-      target: nginx
-    image: ${DOCKER_IMAGE:-pokemon-showdown-client-nginx:latest}
+    # Deploy the image CI built and pushed to ghcr, addressed by an immutable tag.
+    # Set IMAGE_TAG to a git sha (e.g. IMAGE_TAG=890b845f...) to pin a specific
+    # commit; defaults to :latest. pull_policy: always guarantees the newest
+    # image for a given tag is fetched on every (re)deploy instead of reusing a
+    # locally cached layer.
+    image: ghcr.io/malaow3/pokemon-showdown-client:${IMAGE_TAG:-latest}
+    pull_policy: always
     ports:
       - "4000:80"
     restart: unless-stopped

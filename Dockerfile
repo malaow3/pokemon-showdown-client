@@ -1,6 +1,9 @@
 # Build stage
 FROM denoland/deno:2.3.3 AS builder
 
+# Commit that produced this image; passed in by CI (--build-arg GIT_SHA=...)
+ARG GIT_SHA=unknown
+
 WORKDIR /app
 
 # Copy dependency manifests
@@ -19,6 +22,10 @@ COPY . .
 
 # Build the Pokemon Showdown client
 RUN npm run build
+
+# Stamp the built commit so the running deployment can be identified at runtime
+# (served uncached at /version.txt — see nginx.conf).
+RUN echo "$GIT_SHA" > play.pokemonshowdown.com/version.txt
 
 # API/proxy stage
 FROM denoland/deno:2.3.3 AS deno-server
