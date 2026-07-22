@@ -495,6 +495,33 @@ export class MainMenuRoom extends PSRoom {
 				}
 			}
 			break;
+		case 'savereplay': {
+			const replayid = response.id;
+			const serverid = Config.server.id && toID(Config.server.id.split(':')[0]);
+			const fullReplayId = (serverid && serverid !== 'showdown') ? `${serverid}-${replayid}` : replayid;
+			PSLoginServer.rawQuery('uploadreplay', {
+				log: response.log,
+				serverid: serverid || '',
+				password: response.password || '',
+				id: fullReplayId,
+			}).then(result => {
+				if (response.silent) return;
+				if (!result) return;
+				const parts = result.split(':');
+				if (parts[0] === 'success') {
+					PS.alert(`Replay saved! https://${Config.routes.replays}/${parts[1] || fullReplayId}`);
+				} else if (result === 'hash mismatch') {
+					PS.alert("Someone else is already uploading a replay of this battle. Try again in five seconds.");
+				} else if (result === 'not found') {
+					PS.alert("This server isn't registered, and doesn't support uploading replays.");
+				} else if (result === 'invalid id') {
+					PS.alert("This server is using invalid battle IDs, so this replay can't be uploaded.");
+				} else {
+					PS.alert(`Error while uploading replay: ${result}`);
+				}
+			});
+			break;
+		}
 		}
 		for (const callback of this.listeners[fullid] || []) callback(response);
 		delete this.listeners[fullid];
@@ -527,8 +554,8 @@ class NewsPanel extends PSRoomPanel {
 	}
 	override render() {
 		const cookieSet = !document.cookie.includes('preactalpha=0');
-		return <PSPanelWrapper room={this.props.room} fullSize>
-			<div class="construction">
+		return <PSPanelWrapper room={this.props.room}>
+			{/* <div class="construction">
 				This is the client rewrite beta test.
 				<form>
 					<label class="checkbox">
@@ -545,7 +572,7 @@ class NewsPanel extends PSRoomPanel {
 					</label>
 				</form>
 				Provide feedback in <a href="development" style="color:black">the Dev chatroom</a>.
-			</div>
+			</div> */}
 			<div class="readable-bg" dangerouslySetInnerHTML={{ __html: PS.newsHTML }}></div>
 		</PSPanelWrapper>;
 	}
@@ -559,6 +586,23 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 	override componentDidMount() {
 		super.componentDidMount();
 		this.subscribeTo(PSBackground);
+	}
+	static getClassicClientURL() {
+		const location = window.location;
+		const isLocalTestServer = /^(?:localhost|127\.0\.0\.1)$/.test(location.hostname) || !!location.port;
+		let path = location.pathname;
+		if (path.endsWith('/testclient-beta.html')) {
+			path = path.replace(/testclient-beta\.html$/, 'testclient.html');
+		} else if (isLocalTestServer) {
+			path = '/classic';
+		} else if (path === '/beta') {
+			path = '/';
+		} else if (path.startsWith('/beta/')) {
+			path = path.slice(5);
+		} else {
+			path = '/';
+		}
+		return `${location.protocol}//${location.host}${path}${location.search}${location.hash}`;
 	}
 	override focus(options?: PSRoomFocusOptions) {
 		if (!options?.preventScroll) PSView.scrollToRoom();
@@ -574,6 +618,11 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 			return;
 		}
 		PS.mainmenu.startSearch(format, team, ev.target as HTMLElement);
+	};
+	switchToClassicClient = (ev: Event) => {
+		ev.preventDefault();
+		ev.stopPropagation();
+		window.location.href = MainMenuPanel.getClassicClientURL();
 	};
 	handleDragStart = (e: DragEvent) => {
 		const room = PS.getRoom(e.currentTarget);
@@ -756,6 +805,9 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 						<p><a class={"mainmenu5 mainmenu" + onlineButton} href="users">Find a user</a></p>
 						<p><a class={"mainmenu6 mainmenu" + onlineButton} href="view-friends-all">Friends</a></p>
 						<p><a class={"mainmenu7 mainmenu" + onlineButton} href="resources">Info & Resources</a></p>
+						<p><button class="mainmenu7 mainmenu button" type="button" onClick={this.switchToClassicClient}>
+							Swap to Classic client
+						</button></p>
 					</div>
 				</div>
 				<div class="mainmenu-right" style={{ display: PS.leftPanelWidth ? 'none' : 'block' }}>

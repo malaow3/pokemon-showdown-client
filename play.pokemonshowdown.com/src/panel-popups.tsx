@@ -669,6 +669,7 @@ class OptionsPanel extends PSRoomPanel {
 		case 'noselfhighlight':
 		case 'leavePopupRoom':
 		case 'inchatpm':
+		case 'customtheme':
 			PS.prefs.set(setting, value);
 			break;
 		}
@@ -731,6 +732,11 @@ class OptionsPanel extends PSRoomPanel {
 				<label class="checkbox"> <input
 					name="noanim" checked={PS.prefs.noanim || false} type="checkbox" onChange={this.handleOnChange}
 				/> Disable animations</label>
+			</p>
+			<p>
+				<label class="checkbox"> <input
+					name="customtheme" checked={PS.prefs.customtheme || false} type="checkbox" onChange={this.handleOnChange}
+				/> Custom theme (style/custom-theme.css)</label>
 			</p>
 			<p>
 				<label class="checkbox"><input
@@ -1596,6 +1602,10 @@ class BattleOptionsPanel extends PSRoomPanel {
 			}
 			break;
 		}
+		case 'autosavereplay': {
+			PS.prefs.set('autosavereplay', value);
+			break;
+		}
 		case 'autohardcore': {
 			PS.prefs.set('autohardcore', value);
 			if (room?.battle) {
@@ -1765,6 +1775,14 @@ class BattleOptionsPanel extends PSRoomPanel {
 						name="autotimer" checked={PS.prefs.autotimer || false}
 						type="checkbox" onChange={this.handleAllSettings}
 					/> Automatically start timer
+				</label>
+			</p>
+			<p>
+				<label class="checkbox">
+					<input
+						name="autosavereplay" checked={PS.prefs.autosavereplay || false}
+						type="checkbox" onChange={this.handleAllSettings}
+					/> Automatically save replays
 				</label>
 			</p>
 			<p>

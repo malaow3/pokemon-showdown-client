@@ -510,6 +510,12 @@ Storage.postCrossOriginMessage = function (data) {
 Storage.initTestClient = function () {
 	Config.server = Config.server || Config.defaultserver;
 	Storage.whenTeamsLoaded.load();
+	if (Config.loginServerProxy) {
+		Storage.whenAppLoaded(function () {
+			Storage.whenPrefsLoaded.load();
+		});
+		return;
+	}
 
 	var sid = null;
 	if (typeof POKEMON_SHOWDOWN_TESTCLIENT_KEY === 'string') {
@@ -519,6 +525,9 @@ Storage.initTestClient = function () {
 	Storage.whenAppLoaded(function (app) {
 		var get = $.get;
 		$.get = function (uri, data, callback, type) {
+			if (Config.loginServerProxy && uri.indexOf(Config.loginServerProxy) === 0) {
+				return get(uri, data, callback, type);
+			}
 			if (type === 'html') {
 				uri += '&testclient';
 			}
@@ -541,6 +550,9 @@ Storage.initTestClient = function () {
 		};
 		var post = $.post;
 		$.post = function (uri, data, callback, type) {
+			if (Config.loginServerProxy && uri.indexOf(Config.loginServerProxy) === 0) {
+				return post(uri, data, callback, type);
+			}
 			if (type === 'html') {
 				uri += '&testclient';
 			}

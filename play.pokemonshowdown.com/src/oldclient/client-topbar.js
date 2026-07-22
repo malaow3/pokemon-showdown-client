@@ -460,6 +460,7 @@
 			'change input[name=noanim]': 'setNoanim',
 			'change input[name=nogif]': 'setNogif',
 			'change input[name=bwgfx]': 'setBwgfx',
+			'change input[name=customtheme]': 'setCustomtheme',
 			'change input[name=nopastgens]': 'setNopastgens',
 			'change select[name=tournaments]': 'setTournaments',
 			'change select[name=language]': 'setLanguage',
@@ -522,6 +523,7 @@
 				buf += '<p><label class="checkbox"><input type="checkbox" name="nogif"' + (Dex.prefs('nogif') ? ' checked' : '') + ' /> Disable GIFs for Chrome 64 bug</label></p>';
 			}
 			buf += '<p><label class="checkbox"><input type="checkbox" name="bwgfx"' + (Dex.prefs('bwgfx') ? ' checked' : '') + ' /> Use 2D sprites instead of 3D models</label></p>';
+			buf += '<p><label class="checkbox"><input type="checkbox" name="customtheme"' + (Dex.prefs('customtheme') ? ' checked' : '') + ' /> Custom theme (style/custom-theme.css)</label></p>';
 			buf += '<p><label class="checkbox"><input type="checkbox" name="nopastgens"' + (Dex.prefs('nopastgens') ? ' checked' : '') + ' /> Use modern sprites for past generations</label></p>';
 
 			buf += '<hr />';
@@ -621,6 +623,12 @@
 			var bwgfx = !!e.currentTarget.checked;
 			Storage.prefs('bwgfx', bwgfx);
 			Dex.loadSpriteData(bwgfx || Dex.prefs('noanim') ? 'bw' : 'xy');
+		},
+		setCustomtheme: function (e) {
+			var customtheme = !!e.currentTarget.checked;
+			Storage.prefs('customtheme', customtheme);
+			var link = document.getElementById('custom-theme-css');
+			if (link) link.disabled = !customtheme;
 		},
 		setNopastgens: function (e) {
 			var nopastgens = !!e.currentTarget.checked;
