@@ -18,6 +18,144 @@ import { PSModel } from "./client-core";
 import { Net } from "./client-connection";
 import { PSIcon, PSView } from "./panels";
 
+// Pokebin WASM decryption support
+interface PokebinWasmExports {
+	init(seed: number): void;
+	memory: WebAssembly.Memory;
+	allocUint8(length: number): number;
+	encryptMessage(buffer_ptr: number, passphrase_len: number, message_len: number): boolean;
+	decryptMessage(buffer_ptr: number, passphrase_len: number, encrypted_len: number): boolean;
+	resetArena(): void;
+	getResultPtr(): number;
+	getResultLen(): number;
+}
+
+let pokebinWasm: PokebinWasmExports | null = null;
+let pokebinWasmPromise: Promise<PokebinWasmExports | null> | null = null;
+
+async function loadPokebinWasm(): Promise<PokebinWasmExports | null> {
+	if (pokebinWasm) return pokebinWasm;
+	if (pokebinWasmPromise) return pokebinWasmPromise;
+	pokebinWasmPromise = (async () => {
+		try {
+			let memory: WebAssembly.Memory = null!;
+			const wasmModule = await WebAssembly.instantiateStreaming(
+				fetch('https://pokebin.com/wasm'),
+				{
+					env: {
+						_throwError(pointer: number, length: number) {
+							const slice = new Uint8Array(memory.buffer, pointer, length);
+							throw new Error(new TextDecoder().decode(slice));
+						},
+						_consoleLog(pointer: number, length: number) {
+							const slice = new Uint8Array(memory.buffer, pointer, length);
+							console.log(new TextDecoder().decode(slice));
+						},
+					},
+				}
+			);
+			const exports = wasmModule.instance.exports as unknown as PokebinWasmExports;
+			memory = exports.memory;
+			// WASM expects a BigInt seed but our tsconfig lib doesn't include BigInt types
+			exports.init((globalThis as any).BigInt(Date.now()));
+			pokebinWasm = exports;
+			return pokebinWasm;
+		} catch (e) {
+			console.error('Failed to load pokebin WASM:', e);
+			pokebinWasmPromise = null;
+			return null;
+		}
+	})();
+	return pokebinWasmPromise;
+}
+
+function pokebinDecrypt(encrypted: string, passphrase: string): string | null {
+	if (!pokebinWasm) return null;
+	const exports = pokebinWasm;
+	const passphraseLen = passphrase.length;
+	const encryptedLen = encrypted.length;
+
+	const bufferPtr = exports.allocUint8(passphraseLen + encryptedLen);
+	if (!bufferPtr) {
+		exports.resetArena();
+		return null;
+	}
+
+	let memoryView = new Uint8Array(exports.memory.buffer);
+	const passphraseBytes = new TextEncoder().encode(passphrase);
+	const encryptedBytes = new TextEncoder().encode(encrypted);
+
+	for (let i = 0; i < passphraseLen; i++) {
+		memoryView[bufferPtr + i] = passphraseBytes[i];
+	}
+	for (let i = 0; i < encryptedLen; i++) {
+		memoryView[bufferPtr + passphraseLen + i] = encryptedBytes[i];
+	}
+
+	const success = exports.decryptMessage(bufferPtr, passphraseLen, encryptedLen);
+	if (!success) {
+		exports.resetArena();
+		return null;
+	}
+
+	const resultPtr = exports.getResultPtr();
+	const resultLen = exports.getResultLen();
+	if (!resultPtr || !resultLen) {
+		exports.resetArena();
+		return null;
+	}
+
+	memoryView = new Uint8Array(exports.memory.buffer);
+	const result = new TextDecoder().decode(memoryView.slice(resultPtr, resultPtr + resultLen));
+	exports.resetArena();
+	return result;
+}
+
+function pokebinEncrypt(message: string, passphrase: string): string | null {
+	if (!pokebinWasm) return null;
+	const exports = pokebinWasm;
+	const passphraseLen = passphrase.length;
+	const messageLen = message.length;
+
+	const bufferPtr = exports.allocUint8(passphraseLen + messageLen);
+	if (!bufferPtr) {
+		exports.resetArena();
+		return null;
+	}
+
+	let memoryView = new Uint8Array(exports.memory.buffer);
+	const passphraseBytes = new TextEncoder().encode(passphrase);
+	const messageBytes = new TextEncoder().encode(message);
+
+	for (let i = 0; i < passphraseLen; i++) {
+		memoryView[bufferPtr + i] = passphraseBytes[i];
+	}
+	for (let i = 0; i < messageLen; i++) {
+		memoryView[bufferPtr + passphraseLen + i] = messageBytes[i];
+	}
+
+	const success = exports.encryptMessage(bufferPtr, passphraseLen, messageLen);
+	if (!success) {
+		exports.resetArena();
+		return null;
+	}
+
+	const resultPtr = exports.getResultPtr();
+	const resultLen = exports.getResultLen();
+	if (!resultPtr || !resultLen) {
+		exports.resetArena();
+		return null;
+	}
+
+	memoryView = new Uint8Array(exports.memory.buffer);
+	const result = new TextDecoder().decode(memoryView.slice(resultPtr, resultPtr + resultLen));
+	exports.resetArena();
+	return result;
+}
+
+function utf8ToBase64(str: string): string {
+	return btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+}
 type InnerFocusType = 'pokemon' | 'ability' | 'item' | 'move' | 'stats' | 'details' | 'import';
 type TeamEditorMode = 'form' | 'import';
 
@@ -1180,6 +1318,9 @@ class TeamTextbox extends preact.Component<{
 	override state = {
 		copyButtonUsed: undefined as number | undefined,
 	};
+	OTS_export = false;
+	removeAuthor = false;
+	pokebinPassword = '';
 	static EMPTY_PROMISE = Promise.resolve(null);
 	editor!: TeamEditorState;
 	setInfo: {
@@ -1322,6 +1463,80 @@ class TeamTextbox extends preact.Component<{
 		const current = this.textbox.selectionEnd;
 		const lineStart = this.textbox.value.lastIndexOf('\n', current) + 1;
 		const value = this.textbox.value.slice(lineStart, current);
+
+		const pokebin = /^https?:\/\/pokebin.com\/([a-z0-9]+)(?:\/.*)?$/.exec(value)?.[1];
+		if (pokebin) {
+			this.editor.fetching = true;
+			Net(`https://pokebin.com/${pokebin}/json`).get().then(json => {
+				const data = JSON.parse(json);
+				if (!data.encrypted) {
+					const paste = data.data;
+					const pasteTxt = paste.content.replace(/\r\n/g, '\n');
+					if (this.textbox) {
+						// make sure it's still there:
+						const valueIndex = this.textbox.value.indexOf(value);
+						this.replace(paste.content.replace(/\r\n/g, '\n'), valueIndex, valueIndex + value.length);
+					} else {
+						this.editor.import(pasteTxt);
+						this.props.onChange?.();
+					}
+					const format = paste.format;
+					if (format) {
+						this.editor.setFormat(format);
+					}
+					const title = paste.title as string;
+					if (title && !title.startsWith('Untitled')) {
+						this.editor.team.name = title.replace(/[|\\/]/g, '');
+					}
+					this.editor.fetching = false;
+					this.props.onUpdate?.();
+				} else {
+					this.editor.fetching = false;
+					const encryptedData = data.data;
+					PS.prompt("Enter password for encrypted PokeBin team:", {
+						type: 'password',
+						okButton: 'Decrypt',
+					}).then(async password => {
+						if (!password) return;
+						const wasm = await loadPokebinWasm();
+						if (!wasm) {
+							PS.alert("Failed to load decryption module.");
+							return;
+						}
+						const decrypted = pokebinDecrypt(encryptedData, password);
+						if (!decrypted) {
+							PS.alert("Incorrect password.");
+							return;
+						}
+						let paste;
+						try {
+							paste = JSON.parse(decrypted);
+						} catch {
+							PS.alert("Failed to decrypt team.");
+							return;
+						}
+						const pasteTxt = paste.content.replace(/\r\n/g, '\n');
+						if (this.textbox) {
+							const valueIndex = this.textbox.value.indexOf(value);
+							this.replace(pasteTxt, valueIndex, valueIndex + value.length);
+						} else {
+							this.editor.import(pasteTxt);
+							this.props.onChange?.();
+						}
+						const format = paste.format;
+						if (format) {
+							this.editor.setFormat(format);
+						}
+						const title = paste.title as string;
+						if (title && !title.startsWith('Untitled')) {
+							this.editor.team.name = title.replace(/[|\\/]/g, '');
+						}
+						this.props.onUpdate?.();
+					});
+				}
+			});
+			return true;
+		}
 
 		const pokepaste = /^https?:\/\/pokepast.es\/([a-z0-9]+)(?:\/.*)?$/.exec(value)?.[1];
 		if (pokepaste) {
@@ -1847,6 +2062,88 @@ class TeamTextbox extends preact.Component<{
 	bottomY() {
 		return this.setInfo[this.setInfo.length - 1]?.bottomY ?? 8;
 	}
+	getPokebinPayload(): string {
+		const editor = this.editor;
+		let sets = editor.sets;
+
+		if (this.OTS_export) {
+			sets = sets.map(set => {
+				const otsSet: Dex.PokemonSet = {
+					species: set.species,
+					moves: set.moves,
+				};
+				if (set.name) otsSet.name = set.name;
+				if (set.item) otsSet.item = set.item;
+				if (set.ability) otsSet.ability = set.ability;
+				if (set.gender) otsSet.gender = set.gender;
+				if (set.level) otsSet.level = set.level;
+				if (set.shiny) otsSet.shiny = set.shiny;
+				if (set.teraType) otsSet.teraType = set.teraType;
+				if (set.gigantamax) otsSet.gigantamax = set.gigantamax;
+				if (set.dynamaxLevel) otsSet.dynamaxLevel = set.dynamaxLevel;
+				if (set.pokeball) otsSet.pokeball = set.pokeball;
+				if (set.hpType) otsSet.hpType = set.hpType;
+				if (typeof set.happiness === 'number') otsSet.happiness = set.happiness;
+				return otsSet;
+			});
+		}
+
+		const content = Teams.export(sets, editor.dex).trim();
+		const baseData = {
+			title: editor.team.name || 'Untitled',
+			author: this.removeAuthor ? '' : (PS.user?.name || ''),
+			notes: '',
+			format: editor.format,
+			rental: '',
+			content,
+		};
+
+		let formData: { encrypted: boolean, data: typeof baseData | string };
+
+		if (this.pokebinPassword) {
+			const encrypted = pokebinEncrypt(JSON.stringify(baseData), this.pokebinPassword);
+			if (!encrypted) {
+				throw new Error("Encryption failed");
+			}
+			formData = { encrypted: true, data: encrypted };
+		} else {
+			formData = { encrypted: false, data: baseData };
+		}
+
+		return utf8ToBase64(JSON.stringify(formData));
+	}
+	uploadToPokebin = async () => {
+		if (this.pokebinPassword) {
+			const wasm = await loadPokebinWasm();
+			if (!wasm) {
+				PS.alert("Failed to load encryption module.");
+				return;
+			}
+		}
+
+		let encoded: string;
+		try {
+			encoded = this.getPokebinPayload();
+		} catch {
+			PS.alert("Failed to prepare upload.");
+			return;
+		}
+
+		const form = document.createElement('form');
+		form.method = 'POST';
+		form.action = 'https://pokebin.com/create';
+		form.target = '_blank';
+
+		const input = document.createElement('input');
+		input.type = 'hidden';
+		input.name = 'data';
+		input.value = encoded;
+		form.appendChild(input);
+
+		document.body.appendChild(form);
+		form.submit();
+		document.body.removeChild(form);
+	};
 	copyAll = (ev: Event) => {
 		this.textbox.select();
 		document.execCommand('copy');
@@ -1862,6 +2159,35 @@ class TeamTextbox extends preact.Component<{
 			`top:${(this.setInfo[this.innerFocus.setIndex]?.bottomY ?? this.bottomY() + 50) - 12}px`
 		);
 		return <div class="team-pad">
+			<p>
+				<label>
+					<input type="checkbox" checked={this.OTS_export} onChange={e => {
+						this.OTS_export = (e.target as HTMLInputElement).checked;
+						this.forceUpdate();
+					}} /> OTS
+				</label>
+				<label style="margin-left: 20px">
+					<input type="checkbox" checked={this.removeAuthor} onChange={e => {
+						this.removeAuthor = (e.target as HTMLInputElement).checked;
+						this.forceUpdate();
+					}} /> Remove author
+				</label>
+				<label style="margin-left: 20px">
+					Password {}
+					<input
+						type="password" class="textbox" style="width: 120px"
+						value={this.pokebinPassword}
+						onInput={e => {
+							this.pokebinPassword = (e.target as HTMLInputElement).value;
+							this.forceUpdate();
+						}}
+						placeholder="Optional"
+					/>
+				</label>
+				<button style="margin-left: 20px" class="button" onClick={this.uploadToPokebin}>
+					Upload to PokeBin
+				</button>
+			</p>
 			<p>
 				<button class={`button ${this.state.copyButtonUsed ? 'cur' : ''}`} onClick={this.copyAll}>
 					{this.state.copyButtonUsed ? (

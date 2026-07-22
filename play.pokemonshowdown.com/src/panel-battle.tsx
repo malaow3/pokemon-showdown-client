@@ -414,7 +414,12 @@ class BattlePanel extends PSRoomPanel<BattleRoom> {
 		if (PS.prefs.autohardcore) {
 			battle.setHardcoreMode(true);
 		}
-		battle.subscribe(() => this.forceUpdate());
+		battle.subscribe(state => {
+			if (state === 'ended' && PS.prefs.autosavereplay && room.battle.mySide.id === PS.user.userid) {
+				this.send('/savereplay silent');
+			}
+			this.forceUpdate();
+		});
 	}
 	override componentWillUnmount() {
 		const scene = this.props.room.battle?.scene as BattleScene | undefined;

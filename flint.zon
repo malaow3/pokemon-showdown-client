@@ -1,0 +1,18 @@
+.{
+    .tasks = .{
+        .{
+            .name = "run",
+            .cmd = "bun run server.ts",
+            .watcher = .{
+                "play\\.pokemonshowdown\\.com/src/.*",
+            },
+            .deps = .{"build"},
+            .keep_alive = true,
+            .env = .{"PREACT_DEVTOOLS=1"},
+        },
+        .{
+            .name = "build",
+            .cmd = "bun run build",
+        },
+    },
+}

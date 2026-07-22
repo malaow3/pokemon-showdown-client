@@ -218,7 +218,9 @@ function toId() {
 		 */
 		getActionPHP: function () {
 			var ret = '/~~' + Config.server.id + '/action.php';
-			if (Config.testclient) {
+			if (Config.loginServerProxy) {
+				ret = Config.loginServerProxy + '?serverid=' + encodeURIComponent(Config.server.id);
+			} else if (Config.testclient) {
 				ret = 'https://' + Config.routes.client + ret;
 			}
 			return (this.getActionPHP = function () {
@@ -479,6 +481,8 @@ function toId() {
 				var colorSchemeQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
 				var dark = theme === 'dark' || (theme === 'system' && colorSchemeQuery && colorSchemeQuery.matches);
 				$('html').toggleClass('dark', dark);
+				var customThemeEl = document.getElementById('custom-theme-css');
+				if (customThemeEl) customThemeEl.disabled = !Dex.prefs('customtheme');
 				if (colorSchemeQuery && colorSchemeQuery.media !== 'not all') {
 					colorSchemeQuery.addEventListener('change', function (cs) {
 						if (Dex.prefs('theme') === 'system') $('html').toggleClass('dark', cs.matches);

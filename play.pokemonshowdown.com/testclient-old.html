@@ -10,6 +10,7 @@
 		<link rel="stylesheet" href="style/sim-types.css" />
 		<link rel="stylesheet" href="style/utilichart.css" />
 		<link rel="stylesheet" href="style/font-awesome.css" />
+		<link id="custom-theme-css" rel="stylesheet" href="style/custom-theme.css" disabled />
 		<meta name="robots" content="noindex" />
 		<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 		<script src="https://play.pokemonshowdown.com/config/config.js"></script>
@@ -20,6 +21,7 @@
 				document.head.appendChild(scriptEl);
 			}
 			Config.testclient = true;
+			Config.loginServerProxy = '/api/loginserver';
 			(function() {
 				if (location.search !== '') {
 					var m = /\?~~(([^:\/]*)(:[0-9]*)?)/.exec(location.search);
@@ -127,6 +129,34 @@
 
 		<script src="data/aliases.js" async="async" onerror="loadRemoteData(this.src)"></script>
 		<script src="data/commands.js" async="async" onerror="loadRemoteData(this.src)"></script>
+
+		<script>
+			(function () {
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'https://pokemonshowdown.com/news.json');
+				xhr.onload = function () {
+					try {
+						var data = JSON.parse(xhr.responseText);
+						var html = '';
+						for (var i = 0; i < 2 && i < data.length; i++) {
+							var post = data[i];
+							html += '<div class="newsentry" data-newsid="' + (post.id || '') + '">';
+							if (post.title) html += '<h4>' + post.title + '</h4>';
+							if (post.summaryHTML) html += '<p>' + post.summaryHTML + '</p>';
+							html += '<p>';
+							if (post.author) html += '&mdash;<strong>' + post.author + '</strong>';
+							if (post.date) html += '<small class="date"> on ' + new Date(post.date * 1000).toDateString() + '</small>';
+							html += '</p></div>';
+						}
+						var embed = document.querySelector('.news-embed');
+						if (embed && data[0] && data[0].id) embed.setAttribute('data-newsid', data[0].id);
+						var log = document.querySelector('.news-embed .pm-log');
+						if (log) log.innerHTML = html;
+					} catch (e) {}
+				};
+				xhr.send();
+			})();
+		</script>
 
 		<script>
 			window.onload = () => {

@@ -45,7 +45,7 @@ https://psim.us/dev
 			<div class="mainmenu-mini-windows">
 				<div class="mini-window" data-roomid="news">
 					<h3 class="mini-window-header"><button class="closebutton" tabindex="-1" aria-label="Close"><i class="fa fa-times-circle"></i></button>News</h3>
-					<div id="room-news" class="mini-window-contents ps-room-light scrollable" style="height: auto;" data-newsid="<!-- newsid -->">
+					<div id="room-news" class="mini-window-contents ps-room-light scrollable" style="height: auto; min-height: 0;" data-newsid="<!-- newsid -->">
 						<div class="readable-bg">
 							<!-- build-tools/news-embed.php -->
 						</div>
@@ -65,6 +65,10 @@ https://psim.us/dev
 		</div>
 	</div>
 	<script nomodule defer src="/js/lib/ps-polyfill.js"></script>
+	<script>
+		var Config = window.Config = window.Config || {};
+		Config.loginServerProxy = '/api/loginserver';
+	</script>
 	<script defer src="/config/config.js?"></script>
 	<script defer src="/js/client-core.js?"></script>
 	<!-- At this point, background and dark mode are loaded -->
@@ -80,8 +84,15 @@ https://psim.us/dev
 		linkStyle("/style/utilichart.css?");
 		linkStyle("/style/battle-search.css?");
 		linkStyle("/style/font-awesome.css");
+		(function () {
+			var linkEl = document.createElement('link');
+			linkEl.id = 'custom-theme-css';
+			linkEl.rel = 'stylesheet';
+			linkEl.href = '/style/custom-theme.css';
+			linkEl.disabled = true;
+			document.head.appendChild(linkEl);
+		})();
 	</script>
-
 	<script defer src="/js/battle-dex-data.js?"></script>
 	<script defer src="/js/battle-dex.js?"></script>
 	<script defer src="/js/battle-teams.js?"></script>
@@ -144,5 +155,34 @@ https://psim.us/dev
 	<script defer src="/data/commands.js?"></script>
 
 	<script defer src="/js/client-endload.js?"></script>
+	<script defer src="/showdex/loader.js?v=3"></script>
+	<script>
+		(function () {
+			var log = document.querySelector('#room-news .readable-bg');
+			if (!log) return;
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', '/news.json');
+			xhr.onload = function () {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					var html = '';
+					for (var i = 0; i < 2 && i < data.length; i++) {
+						var post = data[i];
+						html += '<div class="newsentry" data-newsid="' + (post.id || '') + '">';
+						if (post.title) html += '<h4>' + post.title + '</h4>';
+						if (post.summaryHTML) html += '<p>' + post.summaryHTML + '</p>';
+						html += '<p>';
+						if (post.author) html += '&mdash;<strong>' + post.author + '</strong>';
+						if (post.date) html += '<small class="date"> on ' + new Date(post.date * 1000).toDateString() + '</small>';
+						html += '</p></div>';
+					}
+					var roomNews = document.getElementById('room-news');
+					if (roomNews && data[0] && data[0].id) roomNews.setAttribute('data-newsid', data[0].id);
+					log.innerHTML = html;
+				} catch (e) {}
+			};
+			xhr.send();
+		})();
+	</script>
 
 </body></html>
