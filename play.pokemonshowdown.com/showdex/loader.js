@@ -14,7 +14,7 @@
 	var SCRIPT_ID = 'showdex-script-main';
 	// Versioned because /showdex/ is served with a 30-day public cache;
 	// bump this whenever main.js changes.
-	var SRC = '/showdex/main.js?v=2';
+	var SRC = '/showdex/main.js?v=5';
 	var started = false;
 
 	function showdownReady() {
@@ -147,6 +147,57 @@
 		new MutationObserver(scan).observe(document.body, {childList: true, subtree: true});
 	}
 
+	function readCalcdexOverlaySetting(callback) {
+		if (!window.indexedDB) return callback(false);
+		var req = window.indexedDB.open('showdex');
+		req.onerror = function () { callback(false); };
+		req.onsuccess = function () {
+			var db = req.result;
+			if (!db.objectStoreNames.contains('settings')) {
+				db.close();
+				return callback(false);
+			}
+			var getReq = db.transaction('settings', 'readonly').objectStore('settings').get('calcdex');
+			getReq.onerror = function () { db.close(); callback(false); };
+			getReq.onsuccess = function () {
+				var settings = getReq.result;
+				db.close();
+				callback(!!settings && settings.openAs === 'overlay');
+			};
+		};
+	}
+
+	// The Preact client can replace its battle controls after Showdex has patched
+	// them. Keep a DOM-level fallback for the overlay control in that case.
+	function startCalcdexOverlayControlFallback() {
+		readCalcdexOverlaySetting(function (enabled) {
+			if (!enabled) return;
+			var scan = function () {
+				var rooms = document.querySelectorAll('[id^="room-battle-"]');
+				for (var i = 0; i < rooms.length; i++) {
+					var room = rooms[i];
+					if (room.querySelector('button[name="toggleCalcdexOverlay"]')) continue;
+					var battleOptions = room.querySelector('button[data-href="battleoptions"]');
+					var controls = room.querySelector('.battle-controls, .controls');
+					if (!battleOptions && !controls) continue;
+					var button = document.createElement('button');
+					button.type = 'button';
+					button.className = 'button';
+					button.name = 'toggleCalcdexOverlay';
+					button.setAttribute('data-cmd', '/calcdex overlay toggle');
+					button.textContent = 'Open Calcdex';
+					if (battleOptions) {
+						battleOptions.parentNode.insertBefore(button, battleOptions.nextSibling);
+					} else {
+						controls.appendChild(button);
+					}
+				}
+			};
+			scan();
+			new MutationObserver(scan).observe(document.body, {childList: true, subtree: true});
+		});
+	}
+
 	// 'hellodex' on the preact client, 'view-hellodex' on the classic client.
 	var HELLODEX_ROOM_IDS = ['hellodex', 'view-hellodex'];
 
@@ -203,16 +254,12 @@
 		};
 	}
 
-	// Showdex decides whether to auto-focus its Hellodex tab from Redux state
-	// that may not have the stored settings hydrated yet at boot, so the
-	// "Show Chatrooms Panel" setting is unreliable on startup (and Showdex
-	// documents it as a no-op in single-panel/mobile layouts). Enforce it here
-	// instead, in both directions, exactly once during initial boot:
-	// - setting on (default): if the Hellodex steals focus, bounce back home
-	// - setting off: focus the Hellodex once it has been joined
+	// Showdex hydrates its settings after registering the Hellodex route. On
+	// single-panel layouts that delayed hydration can focus Hellodex after an
+	// earlier correction, so keep the home panel selected for the whole boot.
 	function applyFocusSettingDuringBoot() {
 		readFocusRoomsRoomSetting(function (showChatroomsPanel) {
-			var deadline = Date.now() + 10000;
+			var deadline = Date.now() + 30000;
 			var joinedByUs = false;
 			var iv = setInterval(function () {
 				if (Date.now() > deadline) return clearInterval(iv);
@@ -233,7 +280,6 @@
 				if (showChatroomsPanel) {
 					if (HELLODEX_ROOM_IDS.indexOf(currentRoomId()) >= 0) {
 						focusRoom('');
-						clearInterval(iv);
 					}
 				} else {
 					if (!roomid) return;
@@ -248,6 +294,7 @@
 		if (showdownReady()) {
 			inject();
 			startNativeOtsAutoAccept();
+			startCalcdexOverlayControlFallback();
 			applyFocusSettingDuringBoot();
 			return;
 		}
