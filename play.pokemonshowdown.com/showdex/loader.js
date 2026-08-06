@@ -198,96 +198,19 @@
 		});
 	}
 
-	// 'hellodex' on the preact client, 'view-hellodex' on the classic client.
-	var HELLODEX_ROOM_IDS = ['hellodex', 'view-hellodex'];
-
-	function currentRoomId() {
-		if (window.PS && window.PS.room) return window.PS.room.id || '';
-		if (window.app && window.app.curRoom) return window.app.curRoom.id || '';
-		return '';
-	}
-
-	function joinedHellodexRoomId() {
-		for (var i = 0; i < HELLODEX_ROOM_IDS.length; i++) {
-			var id = HELLODEX_ROOM_IDS[i];
-			if (window.PS && window.PS.rooms && window.PS.rooms[id]) return id;
-			if (window.app && window.app.rooms && window.app.rooms[id]) return id;
-		}
-		return '';
-	}
-
-	function focusRoom(roomid) {
-		if (window.PS && typeof window.PS.focusRoom === 'function') {
-			window.PS.focusRoom(roomid);
-			if (typeof window.PS.update === 'function') window.PS.update();
-		} else if (window.app) {
-			if (roomid && typeof window.app.focusRoomRight === 'function') {
-				window.app.focusRoomRight(roomid);
-			} else if (typeof window.app.focusRoom === 'function') {
-				window.app.focusRoom(roomid);
+	// Do not let Showdex's startup route replace the home panel. This only
+	// applies during boot; normal user navigation remains untouched.
+	function keepHomeFocusedDuringBoot() {
+		var deadline = Date.now() + 10000;
+		var iv = setInterval(function () {
+			if (Date.now() > deadline) return clearInterval(iv);
+			var roomid = window.PS && window.PS.room && window.PS.room.id;
+			if (roomid !== 'hellodex' && roomid !== 'view-hellodex' && roomid !== 'rooms') return;
+			if (window.PS && typeof window.PS.focusRoom === 'function') {
+				window.PS.focusRoom('');
+				if (typeof window.PS.update === 'function') window.PS.update();
 			}
-		}
-	}
-
-	// Reads Showdex's "Show Chatrooms Panel" setting (hellodex.focusRoomsRoom).
-	// Defaults to true (keep home focused) when nothing is stored, matching the
-	// patched default in main.js.
-	function readFocusRoomsRoomSetting(callback) {
-		if (!window.indexedDB) return callback(true);
-		var req = window.indexedDB.open('showdex');
-		req.onerror = function () { callback(true); };
-		req.onsuccess = function () {
-			var db = req.result;
-			if (!db.objectStoreNames.contains('settings')) {
-				db.close();
-				return callback(true);
-			}
-			var getReq = db.transaction('settings', 'readonly').objectStore('settings').get('hellodex');
-			getReq.onerror = function () { db.close(); callback(true); };
-			getReq.onsuccess = function () {
-				var settings = getReq.result;
-				var enabled = settings && typeof settings.focusRoomsRoom === 'boolean' ?
-					settings.focusRoomsRoom : true;
-				db.close();
-				callback(enabled);
-			};
-		};
-	}
-
-	// Showdex hydrates its settings after registering the Hellodex route. On
-	// single-panel layouts that delayed hydration can focus Hellodex after an
-	// earlier correction, so keep the home panel selected for the whole boot.
-	function applyFocusSettingDuringBoot() {
-		readFocusRoomsRoomSetting(function (showChatroomsPanel) {
-			var deadline = Date.now() + 30000;
-			var joinedByUs = false;
-			var iv = setInterval(function () {
-				if (Date.now() > deadline) return clearInterval(iv);
-
-				// We always want the Hellodex joined, even when Showdex's
-				// "Open When Showdown Starts" setting is off. 'hellodex' is a
-				// registered route (same one the /hellodex URL uses), so
-				// joining it directly is safe once Showdex has registered it.
-				var roomid = joinedHellodexRoomId();
-				if (!roomid && !joinedByUs &&
-					window.PS && window.PS.routes && window.PS.routes['hellodex'] &&
-					typeof window.PS.join === 'function') {
-					window.PS.join('hellodex', {noURL: true, autofocus: false});
-					joinedByUs = true;
-					roomid = joinedHellodexRoomId();
-				}
-
-				if (showChatroomsPanel) {
-					if (HELLODEX_ROOM_IDS.indexOf(currentRoomId()) >= 0) {
-						focusRoom('');
-					}
-				} else {
-					if (!roomid) return;
-					if (currentRoomId() !== roomid) focusRoom(roomid);
-					clearInterval(iv);
-				}
-			}, 100);
-		});
+		}, 100);
 	}
 
 	function waitForShowdown() {
@@ -295,7 +218,7 @@
 			inject();
 			startNativeOtsAutoAccept();
 			startCalcdexOverlayControlFallback();
-			applyFocusSettingDuringBoot();
+			keepHomeFocusedDuringBoot();
 			return;
 		}
 		setTimeout(waitForShowdown, 250);
