@@ -515,13 +515,12 @@ class FormatDropdownPanel extends PSRoomPanel {
 		const starredPrefs = PS.prefs.starredformats || {};
 		// reverse because the newest starred format should be the default
 		const starred = Object.keys(starredPrefs).filter(id => starredPrefs[id] === true).reverse();
-		let starredDone = false;
 
 		return <PSPanelWrapper room={room} width={width}><div class="pad">
 			{searchBar}
-			{columns.map(column => (
+			{columns.map((column, columnIndex) => (
 				<ul class="options" onClick={this.click}>
-					{!starredDone && starred?.map((id, i) => {
+					{columnIndex === 0 && starred.map(id => {
 						if (this.gen && !id.startsWith(this.gen)) return null;
 						let format = BattleFormats[id] as FormatData | undefined;
 						if (/^gen[1-9]$/.test(id)) {
@@ -534,7 +533,6 @@ class FormatDropdownPanel extends PSRoomPanel {
 							} as any;
 						}
 						if (!format) return null;
-						if (i === starred.length - 1) starredDone = true;
 						if (selectType === 'challenge' && format.challengeShow === false) return null;
 						if (selectType === 'search' && format.searchShow === false) return null;
 						if (selectType === 'teambuilder' && format.team) return null;
