@@ -27,6 +27,27 @@
 		);
 	}
 
+	function isTextInputTarget(target) {
+		for (var elem = target; elem && elem !== document; elem = elem.parentElement) {
+			if (elem.isContentEditable || elem.tagName === 'TEXTAREA') return true;
+			if (elem.tagName === 'INPUT') {
+				return !/^(button|checkbox|file|hidden|image|radio|range|reset|submit)$/i.test(elem.type);
+			}
+		}
+		return false;
+	}
+
+	// Showdex installs document-level hotkey handlers after this loader runs.
+	// Keep those handlers from consuming keystrokes meant for Showdown inputs.
+	function protectTextInputsFromHotkeys() {
+		document.addEventListener('keydown', function (event) {
+			if (isTextInputTarget(event.target)) event.stopImmediatePropagation();
+		}, false);
+		document.addEventListener('keyup', function (event) {
+			if (isTextInputTarget(event.target)) event.stopImmediatePropagation();
+		}, false);
+	}
+
 	function inject() {
 		if (started || window.__SHOWDEX_INIT || document.getElementById(SCRIPT_ID)) return;
 		started = true;
@@ -204,17 +225,23 @@
 		var deadline = Date.now() + 10000;
 		var iv = setInterval(function () {
 			if (Date.now() > deadline) return clearInterval(iv);
+
+			// Focusing a room also focuses its `.autofocus` element. Do not
+			// steal focus from a textbox while the user is typing.
+			var active = document.activeElement;
+			if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+
 			var roomid = window.PS && window.PS.room && window.PS.room.id;
 			if (roomid !== 'hellodex' && roomid !== 'view-hellodex' && roomid !== 'rooms') return;
 			if (window.PS && typeof window.PS.focusRoom === 'function') {
 				window.PS.focusRoom('');
-				if (typeof window.PS.update === 'function') window.PS.update();
 			}
 		}, 100);
 	}
 
 	function waitForShowdown() {
 		if (showdownReady()) {
+			protectTextInputsFromHotkeys();
 			inject();
 			startNativeOtsAutoAccept();
 			startCalcdexOverlayControlFallback();

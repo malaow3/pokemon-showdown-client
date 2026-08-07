@@ -74,17 +74,15 @@
         "npm:@stylistic/eslint-plugin@^4.0.1",
         "npm:@types/d3@^3.5.53",
         "npm:@types/jquery@^3.5.3",
-        "npm:@types/mocha@^5.2.6",
         "npm:babel-plugin-remove-import-export@^1.1.1",
         "npm:eslint@^9.20.1",
         "npm:globals@16",
         "npm:google-auth-library@^3.1.2",
         "npm:image-size@~0.7.5",
-        "npm:mocha@^6.0.2",
         "npm:preact@^10.29.2",
         "npm:source-map@~0.7.3",
-        "npm:typescript-eslint@^8.24.1",
-        "npm:typescript@^5.7.3"
+        "npm:typescript-eslint@~8.58.2",
+        "npm:typescript@^6.0.3"
       ]
     }
   }
