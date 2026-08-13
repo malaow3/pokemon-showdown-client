@@ -13,6 +13,10 @@ import { ChatUserList, PSTextarea, type ChatRoom } from "./panel-chat";
 import { PSRoomPanel, PSPanelWrapper, PSView } from "./panels";
 import { PSHeader } from "./panel-topbar";
 
+declare function isPokebinLoggedIn(): boolean;
+declare function connectPokebin(): Promise<string | null>;
+declare function clearPokebinAuth(): void;
+
 const WARNING_SECONDS = 5;
 const BATTLE_LAYOUT_LABELS: Record<BattleLayoutPreference, string> = {
 	'side-by-side': 'Side-by-side, controls below',
@@ -595,12 +599,14 @@ class VolumePanel extends PSRoomPanel {
 }
 
 class OptionsPanel extends PSRoomPanel {
+	declare state: { pokebinConnected: boolean };
 	static readonly id = 'options';
 	static readonly routes = ['options'];
 	static readonly location = 'modal-popup';
 
 	override componentDidMount() {
 		super.componentDidMount();
+		this.state = { pokebinConnected: isPokebinLoggedIn() };
 		this.subscribeTo(PS.user);
 		PS.mainmenu.makeQuery('userdetails', PS.user.userid).then(() => this.forceUpdate());
 	}
@@ -612,16 +618,16 @@ class OptionsPanel extends PSRoomPanel {
 	setLayout = (e: Event) => {
 		const layout = (e.currentTarget as HTMLSelectElement).value;
 		switch (layout) {
-		case '':
-			PS.prefs.set('onepanel', null);
-			PS.rightPanel ||= PS.rooms['rooms'] || null;
-			break;
-		case 'onepanel':
-			PS.prefs.set('onepanel', true);
-			break;
-		case 'vertical':
-			PS.prefs.set('onepanel', 'vertical');
-			break;
+			case '':
+				PS.prefs.set('onepanel', null);
+				PS.rightPanel ||= PS.rooms['rooms'] || null;
+				break;
+			case 'onepanel':
+				PS.prefs.set('onepanel', true);
+				break;
+			case 'vertical':
+				PS.prefs.set('onepanel', 'vertical');
+				break;
 		}
 		PS.update();
 	};
@@ -639,40 +645,53 @@ class OptionsPanel extends PSRoomPanel {
 		let setting = elem.name;
 		let value = elem.checked;
 		switch (setting) {
-		case 'blockPMs': {
-			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockPMs: value });
-			PS.send(value ? '/blockpms' : '/unblockpms');
-			break;
+			case 'blockPMs': {
+				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockPMs: value });
+				PS.send(value ? '/blockpms' : '/unblockpms');
+				break;
+			}
+			case 'blockChallenges': {
+				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockChallenges: value });
+				PS.send(value ? '/blockchallenges' : '/unblockchallenges');
+				break;
+			}
+			case 'bwgfx': {
+				PS.prefs.set('bwgfx', value);
+				Dex.loadSpriteData(value || PS.prefs.noanim ? 'bw' : 'xy');
+				break;
+			}
+			case 'language': {
+				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, language: elem.value });
+				PS.send(`/language ${elem.value}`);
+				break;
+			}
+			case 'tournaments': {
+				PS.prefs.set(setting, elem.value as 'hide' | 'notify' | 'nonotify');
+				break;
+			}
+			case 'refreshprompt':
+			case 'noanim':
+			case 'nopastgens':
+			case 'noselfhighlight':
+			case 'leavePopupRoom':
+			case 'inchatpm':
+			case 'customtheme':
+				PS.prefs.set(setting, value);
+				break;
 		}
-		case 'blockChallenges': {
-			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockChallenges: value });
-			PS.send(value ? '/blockchallenges' : '/unblockchallenges');
-			break;
+	};
+
+	connectPokeBin = async () => {
+		const token = await connectPokebin();
+		if (token) {
+			this.setState({ pokebinConnected: true });
+		} else {
+			PS.alert('PokeBin connection was cancelled or failed.');
 		}
-		case 'bwgfx': {
-			PS.prefs.set('bwgfx', value);
-			Dex.loadSpriteData(value || PS.prefs.noanim ? 'bw' : 'xy');
-			break;
-		}
-		case 'language': {
-			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, language: elem.value });
-			PS.send(`/language ${elem.value}`);
-			break;
-		}
-		case 'tournaments': {
-			PS.prefs.set(setting, elem.value as 'hide' | 'notify' | 'nonotify');
-			break;
-		}
-		case 'refreshprompt':
-		case 'noanim':
-		case 'nopastgens':
-		case 'noselfhighlight':
-		case 'leavePopupRoom':
-		case 'inchatpm':
-		case 'customtheme':
-			PS.prefs.set(setting, value);
-			break;
-		}
+	};
+	disconnectPokeBin = () => {
+		clearPokebinAuth();
+		this.setState({ pokebinConnected: false });
 	};
 
 	override render() {
@@ -696,6 +715,14 @@ class OptionsPanel extends PSRoomPanel {
 				<button className="button" data-href="changepassword">Password...</button> :
 				<button className="button" data-href="register">Register</button>)}
 
+			<p style="clear:both">
+				{(this.state.pokebinConnected || isPokebinLoggedIn()) ? (
+					<button class="button" onClick={this.disconnectPokeBin}>Disconnect PokeBin</button>
+				) : (
+					<button class="button" onClick={this.connectPokeBin}>Connect PokeBin</button>
+				)}
+			</p>
+
 			<hr />
 			<h3>Graphics</h3>
 			<p>
@@ -714,8 +741,8 @@ class OptionsPanel extends PSRoomPanel {
 				>
 					<option value="">
 						{window.innerWidth < 700 || window.innerHeight < 430 ? "Automatic (Vertical tabs)" :
-						window.innerWidth < 900 ? "Automatic (Single panel)" :
-						"Two panels (if wide enough)"}
+							window.innerWidth < 900 ? "Automatic (Single panel)" :
+								"Two panels (if wide enough)"}
 					</option>
 					<option value="onepanel">Single panel</option>
 					<option value="vertical">Vertical tabs</option>
@@ -840,7 +867,7 @@ class OptionsPanel extends PSRoomPanel {
 				<button class="button" data-cmd="/logout"><i class="fa fa-power-off" aria-hidden></i> Log out</button>
 			</p> : <p class="buttonbar" style="text-align: right">
 				<button class="button" data-href="login"><i class="fa fa-pencil" aria-hidden></i> Choose name</button>
-			</p> }
+			</p>}
 		</div></PSPanelWrapper>;
 	}
 }
@@ -1137,9 +1164,9 @@ class ChangePasswordPanel extends PSRoomPanel {
 
 		return <PSPanelWrapper room={room} width={280}><div class="pad">
 			<form onSubmit={this.handleChangePassword}>
-				{ !!this.state.errorMsg?.length && <p>
+				{!!this.state.errorMsg?.length && <p>
 					<b class="message-error"> {this.state.errorMsg}</b>
-				</p> }
+				</p>}
 				<p>Change your password:</p>
 				<p>
 					<label class="label">
@@ -1223,9 +1250,9 @@ class RegisterPanel extends PSRoomPanel {
 
 		return <PSPanelWrapper room={room} width={280}><div class="pad">
 			<form onSubmit={this.handleRegisterUser}>
-				{ !!this.state.errorMsg?.length && <p>
+				{!!this.state.errorMsg?.length && <p>
 					<b class="message-error"> {this.state.errorMsg}</b>
-				</p> }
+				</p>}
 				<p>Register your account:</p>
 				<p>
 					<label class="label">
@@ -1595,53 +1622,53 @@ class BattleOptionsPanel extends PSRoomPanel {
 		const room = this.getBattleRoom();
 
 		switch (setting) {
-		case 'autotimer': {
-			PS.prefs.set('autotimer', value);
-			if (value) {
-				room?.send('/timer on');
+			case 'autotimer': {
+				PS.prefs.set('autotimer', value);
+				if (value) {
+					room?.send('/timer on');
+				}
+				break;
 			}
-			break;
-		}
-		case 'autosavereplay': {
-			PS.prefs.set('autosavereplay', value);
-			break;
-		}
-		case 'autohardcore': {
-			PS.prefs.set('autohardcore', value);
-			if (room?.battle) {
-				room.battle.setHardcoreMode(value);
-				room.update(null);
+			case 'autosavereplay': {
+				PS.prefs.set('autosavereplay', value);
+				break;
 			}
-			break;
-		}
-		case 'spectatefromstart': {
-			PS.prefs.set('spectatefromstart', value);
-			break;
-		}
-		case 'ignoreopp': {
-			PS.prefs.set('ignoreopp', value);
-			this.handleIgnoreOpponent(value);
-			break;
-		}
-		case 'ignorespects': {
-			PS.prefs.set('ignorespects', value);
-			this.handleIgnoreSpectators(value);
-			break;
-		}
-		case 'ignorenicks': {
-			PS.prefs.set('ignorenicks', value);
-			this.handleIgnoreNicks(value);
-			break;
-		}
-		case 'rightpanel': {
-			PS.prefs.set('rightpanelbattles', value);
-			break;
-		}
-		case 'disallowspectators': {
-			PS.prefs.set('disallowspectators', value);
-			PS.mainmenu.disallowSpectators = value;
-			break;
-		}
+			case 'autohardcore': {
+				PS.prefs.set('autohardcore', value);
+				if (room?.battle) {
+					room.battle.setHardcoreMode(value);
+					room.update(null);
+				}
+				break;
+			}
+			case 'spectatefromstart': {
+				PS.prefs.set('spectatefromstart', value);
+				break;
+			}
+			case 'ignoreopp': {
+				PS.prefs.set('ignoreopp', value);
+				this.handleIgnoreOpponent(value);
+				break;
+			}
+			case 'ignorespects': {
+				PS.prefs.set('ignorespects', value);
+				this.handleIgnoreSpectators(value);
+				break;
+			}
+			case 'ignorenicks': {
+				PS.prefs.set('ignorenicks', value);
+				this.handleIgnoreNicks(value);
+				break;
+			}
+			case 'rightpanel': {
+				PS.prefs.set('rightpanelbattles', value);
+				break;
+			}
+			case 'disallowspectators': {
+				PS.prefs.set('disallowspectators', value);
+				PS.mainmenu.disallowSpectators = value;
+				break;
+			}
 		}
 	};
 	handleBattleLayout = (ev: Event) => {

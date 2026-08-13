@@ -3,6 +3,7 @@ FROM denoland/deno:2.3.3 AS builder
 
 # Commit that produced this image; passed in by CI (--build-arg GIT_SHA=...)
 ARG GIT_SHA=unknown
+ARG POKEBIN_HOST=pokebin.com
 
 WORKDIR /app
 
@@ -21,7 +22,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY . .
 
 # Build the Pokemon Showdown client
-RUN npm run build
+RUN POKEBIN_HOST="$POKEBIN_HOST" npm run build
 
 # Stamp the built commit so the running deployment can be identified at runtime
 # (served uncached at /version.txt — see nginx.conf).

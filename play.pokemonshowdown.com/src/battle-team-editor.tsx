@@ -17,6 +17,13 @@ import { BattleStatGuesser, BattleStatOptimizer, BattleTooltips } from "./battle
 import { PSModel } from "./client-core";
 import { Net } from "./client-connection";
 import { PSIcon, PSView } from "./panels";
+// PokeBin auth helpers are loaded globally via js/pokebin-auth.js (see index-new.html)
+declare function getPokebinAccessToken(): string | null;
+declare function isPokebinLoggedIn(): boolean;
+declare function connectPokebin(): Promise<string | null>;
+declare function clearPokebinAuth(): void;
+declare function uploadPokebinAuthenticated(encodedData: string, visibility?: string): Promise<string | null>;
+declare function getPokebinBase(): string;
 
 // Pokebin WASM decryption support
 interface PokebinWasmExports {
@@ -40,7 +47,7 @@ async function loadPokebinWasm(): Promise<PokebinWasmExports | null> {
 		try {
 			let memory: WebAssembly.Memory = null!;
 			const wasmModule = await WebAssembly.instantiateStreaming(
-				fetch('https://pokebin.com/wasm'),
+				fetch(`${getPokebinBase()}/wasm`),
 				{
 					env: {
 						_throwError(pointer: number, length: number) {
@@ -1321,6 +1328,8 @@ class TeamTextbox extends preact.Component<{
 	OTS_export = false;
 	removeAuthor = false;
 	pokebinPassword = '';
+	pokebinVisibility: 'private' | 'public' = 'private';
+	pokebinConnected = isPokebinLoggedIn();
 	static EMPTY_PROMISE = Promise.resolve(null);
 	editor!: TeamEditorState;
 	setInfo: {
@@ -1464,10 +1473,11 @@ class TeamTextbox extends preact.Component<{
 		const lineStart = this.textbox.value.lastIndexOf('\n', current) + 1;
 		const value = this.textbox.value.slice(lineStart, current);
 
-		const pokebin = /^https?:\/\/pokebin.com\/([a-z0-9]+)(?:\/.*)?$/.exec(value)?.[1];
+		const pokebinMatch = /^https?:\/\/([^/]+)\/([a-z0-9]+)(?:\/.*)?$/.exec(value);
+		const pokebin = pokebinMatch && pokebinMatch[1] === new URL(getPokebinBase()).host ? pokebinMatch[2] : undefined;
 		if (pokebin) {
 			this.editor.fetching = true;
-			Net(`https://pokebin.com/${pokebin}/json`).get().then(json => {
+			Net(`${getPokebinBase()}/${pokebin}/json`).get().then(json => {
 				const data = JSON.parse(json);
 				if (!data.encrypted) {
 					const paste = data.data;
@@ -2129,9 +2139,27 @@ class TeamTextbox extends preact.Component<{
 			return;
 		}
 
+		// If connected to PokeBin, use authenticated API so the paste is owned by the account.
+		if (isPokebinLoggedIn()) {
+			try {
+				const uuid = await uploadPokebinAuthenticated(encoded, this.pokebinVisibility);
+				if (uuid) {
+					window.open(`${getPokebinBase()}/${uuid}`, '_blank');
+					return;
+				}
+			} catch (e) {
+				console.error(e);
+				PS.alert(String(e));
+				return;
+			}
+			// token expired -> fall through to anonymous
+			this.pokebinConnected = false;
+			this.forceUpdate();
+		}
+
 		const form = document.createElement('form');
 		form.method = 'POST';
-		form.action = 'https://pokebin.com/create';
+		form.action = `${getPokebinBase()}/create`;
 		form.target = '_blank';
 
 		const input = document.createElement('input');
@@ -2143,6 +2171,22 @@ class TeamTextbox extends preact.Component<{
 		document.body.appendChild(form);
 		form.submit();
 		document.body.removeChild(form);
+	};
+
+	connectPokebin = async () => {
+		const token = await connectPokebin();
+		if (token) {
+			this.pokebinConnected = true;
+			this.forceUpdate();
+		} else {
+			PS.alert("PokeBin sign-in was cancelled or failed.");
+		}
+	};
+
+	disconnectPokebin = () => {
+		clearPokebinAuth();
+		this.pokebinConnected = false;
+		this.forceUpdate();
 	};
 	copyAll = (ev: Event) => {
 		this.textbox.select();
@@ -2187,6 +2231,12 @@ class TeamTextbox extends preact.Component<{
 				<button style="margin-left: 20px" class="button" onClick={this.uploadToPokebin}>
 					Upload to PokeBin
 				</button>
+				{this.pokebinConnected && <label style="margin-left: 10px">
+					<select class="button" style="padding: 2px 6px" value={this.pokebinVisibility} onChange={e => { this.pokebinVisibility = (e.target as HTMLSelectElement).value as any; this.forceUpdate(); }}>
+						<option value="private">Private</option>
+						<option value="public">Public</option>
+					</select>
+				</label>}
 			</p>
 			<p>
 				<button class={`button ${this.state.copyButtonUsed ? 'cur' : ''}`} onClick={this.copyAll}>

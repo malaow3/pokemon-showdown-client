@@ -405,7 +405,7 @@ export class BattleLog {
 
 				const form = document.createElement('form');
 				form.method = 'POST';
-				form.action = 'https://pokebin.com/create';
+				form.action = `${getPokebinBase()}/create`;
 				form.target = '_blank';
 
 				const input = document.createElement('input');

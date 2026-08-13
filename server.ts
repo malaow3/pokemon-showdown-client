@@ -6,7 +6,7 @@ import { join, fromFileUrl } from "jsr:@std/path";
 
 const clientPath = join(fromFileUrl(new URL(".", import.meta.url)), "play.pokemonshowdown.com");
 const port = Number(Deno.env.get("PORT")) || 4000;
-const preactDevtools = Deno.env.get("PREACT_DEVTOOLS") === "1";
+const preactDevtools = Deno.env.get("PREACT_DEVTOOLS") !== "0";
 
 const devtoolsScripts = `<script src="js/lib/preact-devtools.umd.js"></script>
 	<script src="js/lib/preact-debug.umd.js"></script>`;
@@ -94,6 +94,10 @@ Deno.serve({ port }, async (req) => {
 			return new Response(null, { status: 405 });
 		}
 
+		if (pathname === "/pokebin-callback") {
+			const callback = await Deno.readTextFile(join(clientPath, "pokebin-callback.html"));
+			return new Response(callback, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+		}
 		if (pathname === "/" || pathname === "/hellodex") {
 			return await serveBetaClient();
 		}

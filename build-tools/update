@@ -47,6 +47,8 @@ const autoconfigRegex = new RegExp(`${escapeRegex(AUTOCONFIG_START)}[^]+${escape
 const autoconfig = `${AUTOCONFIG_START}
 Config.version = ${JSON.stringify(version)};
 
+Config.pokebinHost = ${JSON.stringify(process.env.POKEBIN_HOST || 'pokebin.com')};
+
 Config.routes = {
 	root: '${routes.root}',
 	client: '${routes.client}',

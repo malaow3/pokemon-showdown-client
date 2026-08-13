@@ -13,8 +13,13 @@
     "test": "node build && echo \"tsc... \\c\" && tsc && echo \"DONE\neslint... \\c\" && eslint --cache --cache-location caches/eslintcache.json --max-warnings 0 && echo \"DONE\" && node --test test/*.js",
     "fix": "eslint --cache --cache-location caches/eslintcache.json --fix",
     "build": "node build",
+    "build-pokebin": "POKEBIN_HOST=pokebin.com node build",
+    "build-pokebin-malaow3": "POKEBIN_HOST=pokebin.malaow3.com node build",
     "build-full": "node build full",
-    "serve": "deno run --allow-net --allow-read --allow-env server.ts"
+    "watch-build": "node --watch-path=play.pokemonshowdown.com/src --watch-path=replay.pokemonshowdown.com/src --watch-path=teams.pokemonshowdown.com/src build",
+    "serve": "PREACT_DEVTOOLS=1 deno run --allow-net --allow-read --allow-env server.ts",
+    "watch-serve": "PREACT_DEVTOOLS=1 deno run --allow-net --allow-read --allow-env --watch=server.ts,config server.ts",
+    "dev": "trap 'kill 0' EXIT; npm run -s watch-build & npm run -s watch-serve & wait"
   },
   "dependencies": {
     "@babel/core": "^7.26.10",
