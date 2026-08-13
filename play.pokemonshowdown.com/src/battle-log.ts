@@ -35,6 +35,8 @@ export class BattleLog {
 	innerElem: HTMLDivElement;
 	scene: BattleScene | null = null;
 	preemptElem: HTMLDivElement = null!;
+	/** The BO3 game-ready prompt should remain after subsequent battle messages. */
+	readyPrompt: HTMLDivElement | null = null;
 	atBottom = true;
 	skippedLines = false;
 	className: string;
@@ -107,6 +109,7 @@ export class BattleLog {
 	reset() {
 		this.innerElem.innerHTML = '';
 		if (this.preemptElem) this.preemptElem.innerHTML = '';
+		this.readyPrompt = null;
 		this.atBottom = true;
 		this.skippedLines = false;
 		this.joinLeave = null;
@@ -222,6 +225,7 @@ export class BattleLog {
 			}
 			this.joinLeave.element.innerHTML = `<small class="gray">${BattleLog.escapeHTML(buf)}</small>`;
 			(preempt ? this.preemptElem : this.innerElem).appendChild(this.joinLeave.element);
+			this.moveReadyPromptToBottom();
 			return;
 		}
 
@@ -239,6 +243,7 @@ export class BattleLog {
 			this.lastRename.to = user.group + user.name;
 			this.lastRename.element.innerHTML = `<small class="gray">${BattleLog.escapeHTML(this.lastRename.to)} renamed from ${BattleLog.escapeHTML(this.lastRename.from)}.</small>`;
 			(preempt ? this.preemptElem : this.innerElem).appendChild(this.lastRename.element);
+			this.moveReadyPromptToBottom();
 			return;
 		}
 
@@ -1043,8 +1048,14 @@ export class BattleLog {
 		this.scene?.message(sceneMessage);
 		this.addDiv('battle-history', message);
 	}
+	moveReadyPromptToBottom() {
+		if (this.readyPrompt?.parentElement === this.innerElem) {
+			this.innerElem.appendChild(this.readyPrompt);
+		}
+	}
 	addNode(node: HTMLElement, preempt?: boolean) {
 		(preempt ? this.preemptElem : this.innerElem).appendChild(node);
+		if (!preempt && node !== this.readyPrompt) this.moveReadyPromptToBottom();
 		if (this.atBottom) {
 			this.elem.scrollTop = this.elem.scrollHeight;
 		}
@@ -1076,6 +1087,7 @@ export class BattleLog {
 	}
 	changeUhtml(id: string, htmlSrc: string, forceAdd?: boolean) {
 		id = toID(id);
+		const isReadyPrompt = /(?:I'm ready|Are you ready for game \d+)/i.test(htmlSrc);
 		const classContains = ' uhtml-' + id + ' ';
 		let elements = [] as HTMLDivElement[];
 		for (const node of this.innerElem.childNodes as any) {
@@ -1094,6 +1106,12 @@ export class BattleLog {
 			for (const element of elements) {
 				element.innerHTML = BattleLog.sanitizeHTML(htmlSrc);
 			}
+			if (isReadyPrompt) {
+				this.readyPrompt = elements[elements.length - 1];
+				this.moveReadyPromptToBottom();
+			} else if (elements.includes(this.readyPrompt!)) {
+				this.readyPrompt = null;
+			}
 			this.updateScroll();
 			return;
 		}
@@ -1101,8 +1119,12 @@ export class BattleLog {
 			element.parentElement!.removeChild(element);
 		}
 		if (!htmlSrc) return;
-		if (forceAdd) {
+		if (forceAdd || this.scene) {
+			// Battle uhtml can arrive before the remaining end-of-game messages.
 			this.addDiv('notice uhtml-' + id, BattleLog.sanitizeHTML(htmlSrc));
+			if (isReadyPrompt) {
+				this.readyPrompt = this.innerElem.lastElementChild as HTMLDivElement;
+			}
 		} else {
 			this.prependDiv('notice uhtml-' + id, BattleLog.sanitizeHTML(htmlSrc));
 		}
