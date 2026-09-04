@@ -21,8 +21,11 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy source files
 COPY . .
 
-# Build the Pokemon Showdown client
-RUN POKEBIN_HOST="$POKEBIN_HOST" npm run build
+# Build the Pokemon Showdown client. The normal incremental build skips
+# graphics.js when it is absent, so force the battle animation bundle afterward.
+RUN POKEBIN_HOST="$POKEBIN_HOST" npm run build \
+    && rm -f play.pokemonshowdown.com/data/graphics.js play.pokemonshowdown.com/data/graphics.js.map \
+    && node build-tools/update full
 
 # Stamp the built commit so the running deployment can be identified at runtime
 # (served uncached at /version.txt — see nginx.conf).
