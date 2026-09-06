@@ -233,10 +233,15 @@ export class BattleTextParser {
 		return out;
 	}
 
+	/** Accept current server templates without breaking legacy or April Fools data. */
+	static normalizeTemplate(template: string) {
+		return template.replace(/\{([A-Z][A-Z0-9_]*)\}/g, '[$1]');
+	}
+
 	fixLowercase(input: string) {
 		if (this.lowercaseRegExp === undefined) {
 			const prefixes = ['pokemon', 'opposingPokemon', 'team', 'opposingTeam', 'party', 'opposingParty'].map(templateId => {
-				const template = BattleText.default[templateId];
+				const template = BattleTextParser.normalizeTemplate(BattleText.default[templateId]);
 				if (template.startsWith(template.charAt(0).toUpperCase())) return '';
 				const bracketIndex = template.indexOf('[');
 				if (bracketIndex >= 0) return template.slice(0, bracketIndex);
@@ -280,7 +285,7 @@ export class BattleTextParser {
 		if (!['p1', 'p2', 'p3', 'p4'].includes(side)) return `???pokemon:${pokemon}???`;
 		const name = this.pokemonName(pokemon);
 		const isNear = side === this.perspective || side === BattleTextParser.allyID(side as SideID);
-		const template = BattleText.default[isNear ? 'pokemon' : 'opposingPokemon'];
+		const template = BattleTextParser.normalizeTemplate(BattleText.default[isNear ? 'pokemon' : 'opposingPokemon']);
 		return template.replace('[NICKNAME]', name).replace(/\$/g, '$$$$');
 	}
 
@@ -358,7 +363,7 @@ export class BattleTextParser {
 		for (const namespace of namespaces) {
 			if (!namespace) continue;
 			if (namespace === 'OWN') {
-				return BattleText.default[type + 'Own'] + '\n';
+				return BattleTextParser.normalizeTemplate(BattleText.default[type + 'Own']) + '\n';
 			}
 			if (namespace === 'NODEFAULT') {
 				return '';
@@ -373,7 +378,7 @@ export class BattleTextParser {
 					let curTemplate = BattleText[id][`${type}Gen${i}`];
 					if (curTemplate) template = curTemplate;
 				}
-				return template + '\n';
+				return BattleTextParser.normalizeTemplate(template) + '\n';
 			}
 		}
 		if (!BattleText.default[type]) return '';
@@ -382,7 +387,7 @@ export class BattleTextParser {
 			let curTemplate = BattleText.default[`${type}Gen${i}`];
 			if (curTemplate) template = curTemplate;
 		}
-		return template + '\n';
+		return BattleTextParser.normalizeTemplate(template) + '\n';
 	}
 
 	maybeAbility(effect: string | undefined, holder: string) {
@@ -393,7 +398,8 @@ export class BattleTextParser {
 
 	ability(name: string | undefined, holder: string) {
 		if (!name) return '';
-		return BattleText.default.abilityActivation.replace('[POKEMON]', this.pokemon(holder)).replace('[ABILITY]', this.effect(name)) + '\n';
+		return BattleTextParser.normalizeTemplate(BattleText.default.abilityActivation)
+			.replace('[POKEMON]', this.pokemon(holder)).replace('[ABILITY]', this.effect(name)) + '\n';
 	}
 
 	static stat(stat: string) {

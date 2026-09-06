@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Build and serve the local client with nginx. Press Ctrl+C to stop.
+set -euo pipefail
+
+cd "$(dirname "$0")"
+REPO_ROOT="$PWD"
+
+if ! command -v nginx >/dev/null 2>&1; then
+  echo "nginx is required and must be on PATH." >&2
+  exit 1
+fi
+
+npm run build
+
+NGINX_TMP=$(mktemp -d)
+trap 'rm -rf "$NGINX_TMP"' EXIT
+# nginx also receives terminal SIGINT; keep the shell alive for cleanup.
+trap ':' INT
+
+# Override compiled-in paths so nginx needs no system-directory permissions.
+{
+  printf 'pid "%s/nginx.pid";\n' "$NGINX_TMP"
+  printf 'error_log stderr;\nevents {}\nhttp {\n'
+  printf 'include "%s/mime.types";\n' "$REPO_ROOT"
+  printf 'root "%s/play.pokemonshowdown.com";\n' "$REPO_ROOT"
+  printf 'access_log /dev/stdout;\nresolver 1.1.1.1;\n'
+  for kind in client_body proxy fastcgi uwsgi scgi; do
+    printf '%s_temp_path "%s/%s";\n' "$kind" "$NGINX_TMP" "$kind"
+  done
+  sed \
+    -e 's/listen 80;/listen 127.0.0.1:4000;/' \
+    -e '\|root /usr/share/nginx/html;|d' \
+    "$REPO_ROOT/nginx.conf"
+  printf '}\n'
+} > "$NGINX_TMP/nginx.conf"
+
+nginx -p "$NGINX_TMP/" -c "$NGINX_TMP/nginx.conf" -e stderr -t
+echo "Serving http://localhost:4000 — press Ctrl+C to stop."
+nginx -p "$NGINX_TMP/" -c "$NGINX_TMP/nginx.conf" -e stderr -g 'daemon off;'

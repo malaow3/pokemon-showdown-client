@@ -610,6 +610,16 @@ class OptionsPanel extends PSRoomPanel {
 		this.subscribeTo(PS.user);
 		PS.mainmenu.makeQuery('userdetails', PS.user.userid).then(() => this.forceUpdate());
 	}
+	setUsernameColor = (e: Event) => {
+		const color = (e.currentTarget as HTMLInputElement).value;
+		if (!/^#[0-9a-f]{6}$/i.test(color)) return;
+		PS.prefs.set('usernamecolor', color);
+		this.forceUpdate();
+	};
+	resetUsernameColor = () => {
+		PS.prefs.set('usernamecolor', null);
+		this.forceUpdate();
+	};
 	setTheme = (e: Event) => {
 		const theme = (e.currentTarget as HTMLSelectElement).value as 'light' | 'dark' | 'system';
 		PS.prefs.set('theme', theme);
@@ -703,12 +713,22 @@ class OptionsPanel extends PSRoomPanel {
 					class="trainersprite yours" width="40" height="40" style={{ float: 'left', marginLeft: '-50px' }}
 					src={Dex.resolveAvatar(`${PS.user.avatar}`)} data-href="avatars"
 				/> {}
-				<strong>{PS.user.name}</strong>
+				<strong style={{ color: BattleLog.usernameColor(PS.user.userid) }}>{PS.user.name}</strong>
 				<StatusEditor />
 			</p>
 
 			<p style="clear:both">
 				<button class="button" data-href="avatars">Avatar...</button>
+			</p>
+			<p>
+				<label>Username color: <input
+					type="color" name="usernamecolor" onInput={this.setUsernameColor}
+					value={PS.prefs.usernamecolor || BattleLog.defaultUsernameColor(PS.user.userid)}
+				/></label> {}
+				<button class="button" onClick={this.resetUsernameColor} disabled={!PS.prefs.usernamecolor}>
+					Reset
+				</button>
+				<br /><small>Only you see this color. Saved in this browser.</small>
 			</p>
 
 			{PS.user.named && (PS.user.registered?.userid === PS.user.userid ?

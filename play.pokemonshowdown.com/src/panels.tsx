@@ -1339,7 +1339,19 @@ export class PSView extends preact.Component {
 			});
 		}
 
+		let colorUserid = '';
+		const updateUsernameColor = () => {
+			const style = document.documentElement.style;
+			if (colorUserid) style.removeProperty(`--username-color-${colorUserid}`);
+			colorUserid = PS.user.userid;
+			const color = PS.prefs.usernamecolor;
+			if (colorUserid && typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)) {
+				style.setProperty(`--username-color-${colorUserid}`, color);
+			}
+		};
+		PS.user.subscribe(updateUsernameColor);
 		PS.prefs.subscribeAndRun(key => {
+			if (!key || key === 'usernamecolor') updateUsernameColor();
 			if (!key || key === 'theme') {
 				const dark = PS.prefs.theme === 'dark' ||
 					(PS.prefs.theme === 'system' && colorSchemeQuery?.matches);

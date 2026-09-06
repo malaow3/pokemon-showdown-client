@@ -1282,6 +1282,13 @@ export class BattleLog {
 	}
 
 	static usernameColor(name: ID) {
+		const color = this.defaultUsernameColor(name);
+		// Per-user variables also update already-rendered messages. Replays and
+		// the legacy client retain their normal colors.
+		return window.PS ? `var(--username-color-${toID(name)}, ${color})` : color;
+	}
+
+	static defaultUsernameColor(name: ID) {
 		if (this.colorCache[name]) return this.colorCache[name];
 		let hash;
 		if (Config.customcolors[name]) {

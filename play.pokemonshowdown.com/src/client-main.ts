@@ -119,6 +119,8 @@ class PSPrefs extends PSStreamModel<string | null> {
 	nopastgens: boolean | null = null;
 
 	/* Chat Preferences */
+	/** Own username color, visible only in this browser. */
+	usernamecolor: string | null = null;
 	inchatpm: boolean | null = null;
 	noselfhighlight: boolean | null = null;
 	temporarynotifications: boolean | null = null;
