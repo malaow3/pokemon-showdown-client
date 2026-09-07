@@ -2140,7 +2140,7 @@ class TeamTextbox extends preact.Component<{
 		}
 
 		// If connected to PokeBin, use authenticated API so the paste is owned by the account.
-		if (isPokebinLoggedIn()) {
+		if (this.pokebinConnected || isPokebinLoggedIn()) {
 			try {
 				const uuid = await uploadPokebinAuthenticated(encoded, this.pokebinVisibility);
 				if (uuid) {
@@ -2152,9 +2152,11 @@ class TeamTextbox extends preact.Component<{
 				PS.alert(String(e));
 				return;
 			}
-			// token expired -> fall through to anonymous
-			this.pokebinConnected = false;
+			// Never turn an account upload into an anonymous public upload.
+			this.pokebinConnected = isPokebinLoggedIn();
 			this.forceUpdate();
+			PS.alert('PokeBin authentication expired. Please reconnect and try again.');
+			return;
 		}
 
 		const form = document.createElement('form');
