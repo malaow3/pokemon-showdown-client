@@ -216,6 +216,78 @@ if (!Storage.bg.id) {
 // localStorage is banned, and since prefs are cached in other
 // places in certain cases.
 
+// User-uploaded font, registered under the family used by style/custom-theme.css
+// Shares localStorage key with the new client.
+Storage.customFont = {
+	family: 'PS Custom Font',
+	key: 'showdown_customfont',
+	maxBytes: 1500000,
+	sizeKey: 'showdown_customfontsize',
+	face: null,
+	getSize: function () {
+		try {
+			return Math.min(200, Math.max(50, parseInt(localStorage.getItem(this.sizeKey) || '100') || 100));
+		} catch (e) {
+			return 100;
+		}
+	},
+	// percentage (50-200) of the custom theme's base font size
+	setSize: function (percent) {
+		percent = Math.min(200, Math.max(50, Math.round(percent) || 100));
+		document.documentElement.style.setProperty('--ps-font-scale', percent / 100);
+		try {
+			if (percent === 100) {
+				localStorage.removeItem(this.sizeKey);
+			} else {
+				localStorage.setItem(this.sizeKey, percent);
+			}
+		} catch (e) {}
+	},
+	load: function () {
+		document.documentElement.style.setProperty('--ps-font-scale', this.getSize() / 100);
+		var dataUrl;
+		try {
+			dataUrl = localStorage.getItem(this.key);
+		} catch (e) {}
+		if (dataUrl) this.apply(dataUrl).then(null, function () {});
+	},
+	apply: function (dataUrl) {
+		var self = this;
+		var face = new FontFace(this.family, 'url(' + dataUrl + ')', { weight: '100 900' });
+		return face.load().then(function () {
+			if (self.face) document.fonts['delete'](self.face);
+			document.fonts.add(face);
+			self.face = face;
+		});
+	},
+	set: function (file) {
+		var self = this;
+		if (file.size > this.maxBytes) return Promise.reject(new Error("Font is too large (max 1.5MB)."));
+		return new Promise(function (resolve, reject) {
+			var reader = new FileReader();
+			reader.onload = function () { resolve(reader.result); };
+			reader.onerror = function () { reject(new Error("Failed to read font file.")); };
+			reader.readAsDataURL(file);
+		}).then(function (dataUrl) {
+			return self.apply(dataUrl).then(function () {
+				try {
+					localStorage.setItem(self.key, dataUrl);
+				} catch (e) {
+					self.reset();
+					throw new Error("Font can't be saved (browser storage is full).");
+				}
+			});
+		});
+	},
+	reset: function () {
+		if (this.face) document.fonts['delete'](this.face);
+		this.face = null;
+		try {
+			localStorage.removeItem(this.key);
+		} catch (e) {}
+	}
+};
+
 Storage.origin = 'https://' + Config.routes.client;
 
 Storage.prefs = function (prop, value, save) {

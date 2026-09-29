@@ -5,7 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Code+Latin:wght@100..700&display=swap');
 
 body {
-	font-size: 1.344rem;
+	font-size: calc(11pt * var(--ps-font-scale, 1));
 }
 
 #header > div.userbar > span > span {
@@ -31,11 +31,11 @@ h2.battle-history {
 }
 
 .movemenu button {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 }
 .movemenu label {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 2px;
 	font-weight: 700;
 	color: #777;
@@ -44,7 +44,7 @@ h2.battle-history {
 	padding-bottom: 0.7%;
 }
 .movemenu label:hover {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 2px;
 	color: #FFF;
 	text-transform: uppercase;
@@ -61,7 +61,7 @@ h2.battle-history {
 
 /* Move typing & PP text */
 .pp, .type {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	text-transform: uppercase;
 	font-weight: 500;
@@ -72,14 +72,14 @@ h2.battle-history {
 .movemenu button.type-Fire small, .movemenu button.type-Fighting small, .movemenu button.type-Poison small,
 .movemenu button.type-Rock small, .movemenu button.type-Ground small, .movemenu button.type-Ice small,
 .movemenu button.type-Flying small, .movemenu button.type-Psychic small, .movemenu button.type-Bug small {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	font-size: 10.25px !important;
 	text-transform: uppercase;
 	font-weight: 500;
 }
 .movemenu button:disabled small {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	font-size: 10.25px !important;
 	text-transform: uppercase;
@@ -91,19 +91,19 @@ h2.battle-history {
 
 /* Pokémon name / level / HP */
 .statbar strong {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	color: #FFF;
 	font-weight: 500;
 	text-shadow: 0px 0px 4px rgba(0, 0, 0, 1);
 }
 .statbar strong small {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	font-weight: 300;
 }
 .statbar .hpbar .hptext {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	font-weight: 700;
 }
@@ -111,13 +111,13 @@ h2.battle-history {
 /* Turn box */
 .turn,
 .turn.style {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	border: none;
 	opacity: 1;
 }
 .backdrop:after {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	display: inline-block;
 	content: "";
@@ -127,11 +127,11 @@ h2.battle-history {
 }
 .battle {
 	border: 0;
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 }
 
 .leftbar, .rightbar {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	background: none;
 	border: none;
@@ -158,12 +158,12 @@ h2.battle-history {
 	border-top: 2px solid rgba(171, 183, 183, 0.2);
 }
 .battle-history {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	padding-top: 2px;
 }
 h2.battle-history {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	border-bottom: none;
 	padding: 10px;
 	margin-top: -7px;
@@ -219,8 +219,16 @@ abbr[title] {
 .message,
 p,
 body {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
+}
+.chat,
+.battle-history small,
+.battle-log,
+.userlist,
+.battle-log-add,
+.message,
+p {
 	font-size: 1.01em;
 }
 
@@ -249,7 +257,7 @@ small {
 }
 
 #tooltipwrapper .tooltip {
-	font-family: 'M PLUS Code Latin';
+	font-family: 'PS Custom Font', 'M PLUS Code Latin';
 	letter-spacing: 0.3px;
 	border: 1px solid #e3e3e3;
 	background: rgba(255, 255, 255, 0.95);
@@ -421,4 +429,12 @@ small {
 	background: rgba(0, 0, 0, 0.4);
 	border-radius: 5px;
 	padding: 3px;
+}
+
+/* Font size slider (Options): most client text uses fixed pt sizes, so scale the common ones */
+.chat-log, .userlist li {
+	font-size: calc(10pt * var(--ps-font-scale, 1));
+}
+.button, .textbox, select {
+	font-size: calc(9pt * var(--ps-font-scale, 1));
 }

@@ -483,6 +483,7 @@ function toId() {
 				$('html').toggleClass('dark', dark);
 				var customThemeEl = document.getElementById('custom-theme-css');
 				if (customThemeEl) customThemeEl.disabled = !Dex.prefs('customtheme');
+				Storage.customFont.load();
 				if (colorSchemeQuery && colorSchemeQuery.media !== 'not all') {
 					colorSchemeQuery.addEventListener('change', function (cs) {
 						if (Dex.prefs('theme') === 'system') $('html').toggleClass('dark', cs.matches);

@@ -3,7 +3,7 @@ import { toID, toRoomid, toUserid, Dex, PSUtils } from "./battle-dex";
 import type { ID } from "./battle-dex-data";
 import { BattleLog } from "./battle-log";
 import { PSLoginServer } from "./client-connection";
-import { PSBackground } from "./client-core";
+import { PSBackground, PSFont } from "./client-core";
 import {
 	PS, PSRoom, Config, type PSRoomFocusOptions, type RoomOptions, type PSLoginState, type RoomID,
 	type TimestampOptions, type BattleLayoutPreference,
@@ -599,10 +599,30 @@ class VolumePanel extends PSRoomPanel {
 }
 
 class OptionsPanel extends PSRoomPanel {
-	declare state: { pokebinConnected: boolean };
+	declare state: { pokebinConnected: boolean, fontError?: string };
 	static readonly id = 'options';
 	static readonly routes = ['options'];
 	static readonly location = 'modal-popup';
+
+	uploadFont = (ev: Event) => {
+		const input = ev.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		PSFont.set(file).then(
+			() => this.setState({ fontError: undefined }),
+			(err: Error) => this.setState({ fontError: err.message })
+		);
+		input.value = '';
+	};
+	changeFontSize = (ev: Event) => {
+		PSFont.setSize(parseInt((ev.currentTarget as HTMLInputElement).value));
+		this.forceUpdate();
+	};
+	resetFont = () => {
+		PSFont.reset();
+		PSFont.setSize(100);
+		this.setState({ fontError: undefined });
+	};
 
 	override componentDidMount() {
 		super.componentDidMount();
@@ -785,6 +805,17 @@ class OptionsPanel extends PSRoomPanel {
 					name="customtheme" checked={PS.prefs.customtheme || false} type="checkbox" onChange={this.handleOnChange}
 				/> Custom theme (style/custom-theme.css)</label>
 			</p>
+			{PS.prefs.customtheme && <p>
+				<label class="optlabel">Custom font: <input
+					name="customfont" type="file" accept=".woff2,.woff,.ttf,.otf" onChange={this.uploadFont}
+				/></label> {}
+				<button class="button" onClick={this.resetFont}>Reset font</button> {}
+				<label class="optlabel">Font size: <input
+					name="customfontsize" type="range" min="50" max="200" step="5"
+					value={PSFont.getSize()} onInput={this.changeFontSize}
+				/> {PSFont.getSize()}%</label>
+				{this.state.fontError && <span class="error"> {this.state.fontError}</span>}
+			</p>}
 			<p>
 				<label class="checkbox"><input
 					name="bwgfx" checked={PS.prefs.bwgfx || false} type="checkbox" onChange={this.handleOnChange}

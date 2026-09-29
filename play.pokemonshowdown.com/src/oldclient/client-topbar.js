@@ -461,6 +461,9 @@
 			'change input[name=nogif]': 'setNogif',
 			'change input[name=bwgfx]': 'setBwgfx',
 			'change input[name=customtheme]': 'setCustomtheme',
+			'change input[name=customfont]': 'setCustomfont',
+			'click button[name=resetfont]': 'resetCustomfont',
+			'input input[name=customfontsize]': 'setCustomfontsize',
 			'change input[name=nopastgens]': 'setNopastgens',
 			'change select[name=tournaments]': 'setTournaments',
 			'change select[name=language]': 'setLanguage',
@@ -524,6 +527,9 @@
 			}
 			buf += '<p><label class="checkbox"><input type="checkbox" name="bwgfx"' + (Dex.prefs('bwgfx') ? ' checked' : '') + ' /> Use 2D sprites instead of 3D models</label></p>';
 			buf += '<p><label class="checkbox"><input type="checkbox" name="customtheme"' + (Dex.prefs('customtheme') ? ' checked' : '') + ' /> Custom theme (style/custom-theme.css)</label></p>';
+			if (Dex.prefs('customtheme')) {
+				buf += '<p><label class="optlabel">Custom font: <input type="file" name="customfont" accept=".woff2,.woff,.ttf,.otf" /></label> <button class="button" name="resetfont">Reset font</button> <label class="optlabel">Font size: <input type="range" name="customfontsize" min="50" max="200" step="5" value="' + Storage.customFont.getSize() + '" /> <span class="fontsize">' + Storage.customFont.getSize() + '%</span></label> <span class="fonterror error"></span></p>';
+			}
 			buf += '<p><label class="checkbox"><input type="checkbox" name="nopastgens"' + (Dex.prefs('nopastgens') ? ' checked' : '') + ' /> Use modern sprites for past generations</label></p>';
 
 			buf += '<hr />';
@@ -629,6 +635,30 @@
 			Storage.prefs('customtheme', customtheme);
 			var link = document.getElementById('custom-theme-css');
 			if (link) link.disabled = !customtheme;
+		},
+		setCustomfont: function (e) {
+			var input = e.currentTarget;
+			var file = input.files && input.files[0];
+			if (!file) return;
+			var $err = this.$('.fonterror');
+			Storage.customFont.set(file).then(function () {
+				$err.text('');
+			}, function (err) {
+				$err.text(err.message);
+			});
+			input.value = '';
+		},
+		setCustomfontsize: function (e) {
+			var size = parseInt(e.currentTarget.value);
+			Storage.customFont.setSize(size);
+			this.$('.fontsize').text(size + '%');
+		},
+		resetCustomfont: function () {
+			Storage.customFont.reset();
+			Storage.customFont.setSize(100);
+			this.$('input[name=customfontsize]').val(100);
+			this.$('.fontsize').text('100%');
+			this.$('.fonterror').text('');
 		},
 		setNopastgens: function (e) {
 			var nopastgens = !!e.currentTarget.checked;

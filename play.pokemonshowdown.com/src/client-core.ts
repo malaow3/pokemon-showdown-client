@@ -327,6 +327,79 @@ export const PSBackground = new class extends PSStreamModel<string | null> {
 	}
 };
 
+/**
+ * User-uploaded font, registered as 'PS Custom Font', which style/custom-theme.css
+ * lists before the Google-hosted 'M PLUS Code Latin'.
+ * Stored as a data URL in localStorage (shared with the old client).
+ */
+export const PSFont = new class {
+	readonly FAMILY = 'PS Custom Font';
+	readonly KEY = 'showdown_customfont';
+	readonly MAX_BYTES = 1500000;
+	readonly SIZE_KEY = 'showdown_customfontsize';
+	face: FontFace | null = null;
+
+	getSize(): number {
+		try {
+			return Math.min(200, Math.max(50, parseInt(localStorage.getItem(this.SIZE_KEY) || '100') || 100));
+		} catch {
+			return 100;
+		}
+	}
+	/** Font size as a percentage (50-200) of the custom theme's base size */
+	setSize(percent: number) {
+		percent = Math.min(200, Math.max(50, Math.round(percent) || 100));
+		document.documentElement.style.setProperty('--ps-font-scale', `${percent / 100}`);
+		try {
+			if (percent === 100) {
+				localStorage.removeItem(this.SIZE_KEY);
+			} else {
+				localStorage.setItem(this.SIZE_KEY, `${percent}`);
+			}
+		} catch {}
+	}
+
+	constructor() {
+		document.documentElement.style.setProperty('--ps-font-scale', `${this.getSize() / 100}`);
+		try {
+			const dataUrl = localStorage.getItem(this.KEY);
+			if (dataUrl) this.apply(dataUrl).catch(() => {});
+		} catch {}
+	}
+	apply(dataUrl: string): Promise<void> {
+		const face = new FontFace(this.FAMILY, `url(${dataUrl})`, { weight: '100 900' });
+		// load() rejects if the file isn't a valid font
+		return face.load().then(() => {
+			if (this.face) document.fonts.delete(this.face);
+			document.fonts.add(face);
+			this.face = face;
+		});
+	}
+	set(file: File): Promise<void> {
+		if (file.size > this.MAX_BYTES) return Promise.reject(new Error("Font is too large (max 1.5MB)."));
+		return new Promise<string>((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = () => reject(new Error("Failed to read font file."));
+			reader.readAsDataURL(file);
+		}).then(dataUrl => this.apply(dataUrl).then(() => {
+			try {
+				localStorage.setItem(this.KEY, dataUrl);
+			} catch {
+				this.reset();
+				throw new Error("Font can't be saved (browser storage is full).");
+			}
+		}));
+	}
+	reset() {
+		if (this.face) document.fonts.delete(this.face);
+		this.face = null;
+		try {
+			localStorage.removeItem(this.KEY);
+		} catch {}
+	}
+};
+
 /**********************************************************************
  * Core Views
  *********************************************************************/
