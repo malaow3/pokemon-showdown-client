@@ -18,12 +18,13 @@ import { PSModel } from "./client-core";
 import { Net } from "./client-connection";
 import { PSIcon, PSView } from "./panels";
 // PokeBin auth helpers are loaded globally via js/pokebin-auth.js (see index-new.html)
-declare function getPokebinAccessToken(): string | null;
 declare function isPokebinLoggedIn(): boolean;
 declare function connectPokebin(): Promise<string | null>;
 declare function clearPokebinAuth(): void;
 declare function uploadPokebinAuthenticated(encodedData: string, visibility?: string): Promise<string | null>;
 declare function getPokebinBase(): string;
+declare function getPokebinOwnedPastes(): Promise<{ uuid: string; visibility: string; created_at: string; title: string | null; format: string | null }[]>;
+declare function getPokebinPaste(uuid: string): Promise<any>;
 
 // Pokebin WASM decryption support
 interface PokebinWasmExports {
@@ -158,6 +159,19 @@ function pokebinEncrypt(message: string, passphrase: string): string | null {
 	const result = new TextDecoder().decode(memoryView.slice(resultPtr, resultPtr + resultLen));
 	exports.resetArena();
 	return result;
+}
+
+function unpackPokebinPaste(response: any): { encrypted: boolean, payload: any } {
+	let value = response;
+	for (let i = 0; i < 4; i++) {
+		if (!value || typeof value !== 'object') break;
+		if (value.encrypted) return { encrypted: true, payload: value.data };
+		if (!value.data || typeof value.data !== 'object' || 'content' in value.data) {
+			return { encrypted: false, payload: value.data ?? value };
+		}
+		value = value.data;
+	}
+	return { encrypted: false, payload: value };
 }
 
 function utf8ToBase64(str: string): string {
@@ -1324,6 +1338,13 @@ class TeamTextbox extends preact.Component<{
 }> {
 	override state = {
 		copyButtonUsed: undefined as number | undefined,
+		pokebinPastes: [] as { uuid: string; visibility: string; created_at: string; title: string | null; format: string | null }[],
+		pokebinSelection: '',
+		pokebinError: '',
+		pokebinLoading: false,
+		pokebinModal: false,
+		pokebinPreview: [] as Dex.PokemonSet[],
+		pokebinPreviewLoading: false,
 	};
 	OTS_export = false;
 	removeAuthor = false;
@@ -2249,6 +2270,12 @@ class TeamTextbox extends preact.Component<{
 					)}
 				</button>
 			</p>
+			{isPokebinLoggedIn() && <p>
+				<button class="button" onClick={() => void this.loadPokebinPastes()} disabled={this.state.pokebinLoading}>
+					{this.state.pokebinLoading ? 'Loading PokeBin pastes...' : 'Choose a PokeBin team to import'}
+				</button>
+				{this.state.pokebinError && <span class="message-error">{this.state.pokebinError}</span>}
+			</p>}
 			<div class="teameditor-text">
 				<textarea
 					class="textbox teamtextbox" style={`padding-left:${editor.narrow ? '50px' : '100px'}`}
@@ -2338,8 +2365,89 @@ class TeamTextbox extends preact.Component<{
 					)
 				)}
 			</div>
+			{this.state.pokebinModal && <div class="ps-overlay" role="dialog" aria-modal="true" onClick={e => { if (e.target === e.currentTarget) this.setState({ pokebinModal: false }); }}>
+				<div class="ps-popup" style="max-width: 600px; padding: 12px">
+					<h2>Import a team from PokeBin</h2>
+					<div style="max-height: 45vh; overflow-y: auto">
+						{this.state.pokebinPastes.map(paste => <button class="button" style="display:block;width:100%;text-align:left;margin:4px 0" onClick={() => void this.previewPokebinPaste(paste.uuid)}>
+							<strong>{paste.title || paste.uuid}</strong> — {paste.visibility} {paste.format && `— ${paste.format}`}<br />
+							<small>{new Date(paste.created_at).toLocaleString()} · {paste.uuid}</small>
+						</button>)}
+					</div>
+					{this.state.pokebinPreviewLoading ? <p>Loading team preview…</p> : this.state.pokebinPreview.length ? <div class="infobox">
+						<strong>Team preview</strong>
+						{this.state.pokebinPreview.map(set => <p><PSIcon pokemon={set.species} /> {set.name || set.species} — {set.moves.join(' / ')}</p>)}
+					</div> : <p>Select a paste to preview. Password-protected teams show their title and metadata here.</p>}
+					{this.state.pokebinError && <p class="message-error">{this.state.pokebinError}</p>}
+					<button class="button" onClick={() => void this.importPokebinPaste()} disabled={!this.state.pokebinSelection}>Import selected team</button> {}
+					<button class="button" onClick={() => this.setState({ pokebinModal: false })}>Cancel</button>
+				</div>
+			</div>}
 		</div>;
 	}
+	loadPokebinPastes = async () => {
+		this.setState({ pokebinLoading: true, pokebinError: '' });
+		try {
+			const pastes = await getPokebinOwnedPastes();
+			this.loadedPokebinPaste = null;
+			this.setState({ pokebinPastes: pastes, pokebinSelection: '', pokebinLoading: false, pokebinModal: true });
+		} catch (e) {
+			this.setState({ pokebinError: (e as Error).message, pokebinLoading: false });
+		}
+	};
+	loadedPokebinPaste: { uuid: string, paste: any } | null = null;
+	getPokebinPasteData = async (uuid: string): Promise<any | null> => {
+		if (this.loadedPokebinPaste?.uuid === uuid) return this.loadedPokebinPaste.paste;
+		const response = await getPokebinPaste(uuid);
+		const unpacked = unpackPokebinPaste(response);
+		let paste = unpacked.payload;
+		if (unpacked.encrypted) {
+			const password = await PS.prompt('Enter password for encrypted PokeBin team:', { type: 'password', okButton: 'Decrypt' });
+			if (!password) return null;
+			const wasm = await loadPokebinWasm();
+			if (!wasm) throw new Error('Failed to load decryption module.');
+			const decrypted = pokebinDecrypt(unpacked.payload, password);
+			if (!decrypted) throw new Error('Incorrect password.');
+			try { paste = JSON.parse(decrypted); } catch { throw new Error('Failed to decrypt team.'); }
+		}
+		this.loadedPokebinPaste = { uuid, paste };
+		return paste;
+	};
+	previewPokebinPaste = async (uuid: string) => {
+		this.setState({ pokebinSelection: uuid, pokebinPreviewLoading: true, pokebinPreview: [], pokebinError: '' });
+		try {
+			const paste = await this.getPokebinPasteData(uuid);
+			if (this.state.pokebinSelection !== uuid) return;
+			const sets = paste?.content ? Teams.import(paste.content) : [];
+			this.setState({ pokebinPreview: sets, pokebinPreviewLoading: false });
+		} catch (e) {
+			if (this.state.pokebinSelection !== uuid) return;
+			this.setState({ pokebinError: (e as Error).message, pokebinPreviewLoading: false });
+		}
+	};
+	importPokebinPaste = async () => {
+		const uuid = this.state.pokebinSelection;
+		if (!uuid) return;
+		try {
+			const paste = await this.getPokebinPasteData(uuid);
+			if (!paste) return;
+			const content = paste?.content;
+			if (typeof content !== 'string') throw new Error('This paste does not contain team text.');
+			this.editor.import(content.replace(/\r\n/g, '\n'));
+			if (this.textbox) {
+				this.textbox.value = this.editor.export(true);
+				this.updateText();
+			}
+			if (paste.format) this.editor.setFormat(paste.format);
+			if (paste.title && !paste.title.startsWith('Untitled')) this.editor.team.name = paste.title.replace(/[|\\/]/g, '');
+			this.props.onChange?.();
+			this.props.onUpdate?.();
+			this.setState({ pokebinError: '', pokebinModal: false });
+		} catch (e) {
+			this.setState({ pokebinError: (e as Error).message });
+		}
+	};
+
 }
 
 class TeamEditorForm extends preact.Component<{

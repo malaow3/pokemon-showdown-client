@@ -305,3 +305,37 @@ export async function uploadPokebinAuthenticated(encodedData: string, visibility
   const json = await res.json() as { uuid: string };
   return json.uuid;
 }
+
+export interface PokebinOwnedPaste {
+  uuid: string; visibility: string; created_at: string; title: string | null; format: string | null;
+}
+
+async function authenticatedPokebinFetch(path: string): Promise<Response | null> {
+  let token = await renewPokebinAccessToken();
+  if (!token) return null;
+  const request = (accessToken: string) => fetch(`${POKEBIN_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  let response = await request(token);
+  if (response.status === 401) {
+    token = await renewPokebinAccessToken(token);
+    if (!token) return null;
+    response = await request(token);
+  }
+  return response;
+}
+
+export async function getPokebinOwnedPastes(): Promise<PokebinOwnedPaste[]> {
+  const response = await authenticatedPokebinFetch('/api/me/pastes');
+  if (!response) throw new Error('PokeBin login expired. Reconnect and try again.');
+  if (!response.ok) throw new Error(`PokeBin paste list failed: ${response.status}`);
+  const json = await response.json() as { pastes: PokebinOwnedPaste[] };
+  return json.pastes;
+}
+
+export async function getPokebinPaste(uuid: string): Promise<any> {
+  const response = await authenticatedPokebinFetch(`/${encodeURIComponent(uuid)}/json`);
+  if (!response) throw new Error('PokeBin login expired. Reconnect and try again.');
+  if (!response.ok) throw new Error(`PokeBin paste could not be loaded: ${response.status}`);
+  return response.json();
+}
