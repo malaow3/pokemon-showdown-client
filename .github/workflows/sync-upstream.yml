@@ -1,0 +1,125 @@
+name: Sync upstream into server
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: https://github.com/smogon/pokemon-showdown-client.git
+  UPSTREAM_BRANCH: master
+  TARGET_BRANCH: server
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          # A PAT is needed if upstream touches .github/workflows (GITHUB_TOKEN can't push those).
+          token: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream
+        id: upstream
+        run: |
+          git remote add upstream "$UPSTREAM_REPO"
+          git fetch upstream "$UPSTREAM_BRANCH"
+          echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+          if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "uptodate=true" >> "$GITHUB_OUTPUT"
+            echo "Already up to date."
+          else
+            echo "uptodate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check whether we already alerted for this upstream commit
+        if: steps.upstream.outputs.uptodate == 'false'
+        id: seen
+        uses: actions/cache/restore@v4
+        with:
+          path: .sync-notified
+          key: sync-notified-${{ steps.upstream.outputs.sha }}
+
+      - name: Attempt merge
+        if: steps.upstream.outputs.uptodate == 'false'
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git merge --no-edit -m "Merge upstream/$UPSTREAM_BRANCH into $TARGET_BRANCH" "${{ steps.upstream.outputs.sha }}" 2> merge.log; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            {
+              echo 'files<<EOF'
+              git diff --name-only --diff-filter=U | head -15
+              echo EOF
+            } >> "$GITHUB_OUTPUT"
+            git merge --abort || true
+          fi
+
+      - name: Set up Node
+        if: steps.merge.outputs.ok == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Verify merged result builds and passes tests
+        id: verify
+        if: steps.merge.outputs.ok == 'true'
+        run: |
+          set -o pipefail
+          (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tail -n 40 > verify.log
+
+      - name: Push merge and trigger deploy
+        if: steps.merge.outputs.ok == 'true' && steps.verify.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin "HEAD:$TARGET_BRANCH"
+          # Pushes made with GITHUB_TOKEN don't trigger other workflows, so dispatch deploy explicitly.
+          gh workflow run docker-deploy.yml --ref "$TARGET_BRANCH"
+
+      - name: Notify Discord on failure
+        if: >-
+          always() && steps.upstream.outputs.uptodate == 'false' &&
+          steps.seen.outputs.cache-hit != 'true' &&
+          (steps.merge.outputs.ok == 'false' || steps.verify.outcome == 'failure')
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          UP_SHA: ${{ steps.upstream.outputs.sha }}
+          CONFLICTS: ${{ steps.merge.outputs.files }}
+          MERGE_OK: ${{ steps.merge.outputs.ok }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK_URL not set"; exit 0; fi
+          if [ "$MERGE_OK" = "false" ]; then
+            reason="Merge conflict merging \`upstream/$UPSTREAM_BRANCH\` (\`${UP_SHA:0:8}\`) into \`$TARGET_BRANCH\`."
+            detail="Conflicted files:"$'\n'"$CONFLICTS"
+          else
+            reason="Merge was clean but the build/tests **failed** for upstream \`${UP_SHA:0:8}\`. Nothing was pushed or deployed."
+            detail="$(tail -n 15 verify.log 2>/dev/null)"
+          fi
+          msg="$reason"$'\n'"\`\`\`"$'\n'"${detail:0:1200}"$'\n'"\`\`\`"$'\n'"$RUN_URL"
+          curl --fail --silent --show-error -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg content "$msg" '{content: $content}')" "$WEBHOOK"
+          mkdir -p .sync-notified && echo "$UP_SHA" > .sync-notified/sha
+
+      - name: Remember that we alerted for this upstream commit
+        if: always() && hashFiles('.sync-notified/sha') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .sync-notified
+          key: sync-notified-${{ steps.upstream.outputs.sha }}

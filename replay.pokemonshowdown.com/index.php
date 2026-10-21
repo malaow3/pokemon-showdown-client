@@ -108,10 +108,10 @@ https://replay.pokemonshowdown.com/gen7randomdoublesbattle-865046831.log
 
 -->
 
-<link rel="stylesheet" href="//pokemonshowdown.com/style/global.css?" />
-<link rel="stylesheet" href="//play.pokemonshowdown.com/style/font-awesome.css?" />
-<link rel="stylesheet" href="//play.pokemonshowdown.com/style/battle.css?a7" />
-<link rel="stylesheet" href="//play.pokemonshowdown.com/style/utilichart.css?a7" />
+<link rel="stylesheet" href="//pokemonshowdown.com/style/global.css?0.3722059419114362" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/font-awesome.css?0.8214669465532689" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/battle.css?0.3149691660125602" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/utilichart.css?0.5120207080507465" />
 
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-26211653-1"></script>
@@ -249,25 +249,25 @@ https://replay.pokemonshowdown.com/gen7randomdoublesbattle-865046831.log
 <script defer nomodule src="//play.pokemonshowdown.com/js/lib/ps-polyfill.js"></script>
 <script defer src="//play.pokemonshowdown.com/js/lib/preact.min.js"></script>
 
-<script defer src="//play.pokemonshowdown.com/config/config.js?a7"></script>
+<script defer src="//play.pokemonshowdown.com/config/config.js?8ffd7f46"></script>
 <script defer src="//play.pokemonshowdown.com/js/lib/jquery-1.11.0.min.js"></script>
 <script defer src="//play.pokemonshowdown.com/js/lib/html-sanitizer-minified.js"></script>
 <script defer src="//play.pokemonshowdown.com/js/battle-sound.js"></script>
-<script defer src="//play.pokemonshowdown.com/js/battledata.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/pokedex-mini.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/pokedex-mini-bw.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/graphics.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/pokedex.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/moves.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/abilities.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/items.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/data/teambuilder-tables.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/js/battle-tooltips.js?a7"></script>
-<script defer src="//play.pokemonshowdown.com/js/battle.js?a7"></script>
+<script defer src="//play.pokemonshowdown.com/js/battledata.js?0.5983345762326464"></script>
+<script defer src="//play.pokemonshowdown.com/data/pokedex-mini.js?0.7655267075539735"></script>
+<script defer src="//play.pokemonshowdown.com/data/pokedex-mini-bw.js?0.8121429184635569"></script>
+<script defer src="//play.pokemonshowdown.com/data/graphics.js?0.4186462644674349"></script>
+<script defer src="//play.pokemonshowdown.com/data/pokedex.js?0.45376203252284764"></script>
+<script defer src="//play.pokemonshowdown.com/data/moves.js?0.07247877751102938"></script>
+<script defer src="//play.pokemonshowdown.com/data/abilities.js?0.43887020228016205"></script>
+<script defer src="//play.pokemonshowdown.com/data/items.js?0.04283874115844499"></script>
+<script defer src="//play.pokemonshowdown.com/data/teambuilder-tables.js?0.6394048748161516"></script>
+<script defer src="//play.pokemonshowdown.com/js/battle-tooltips.js?0.13683516264523365"></script>
+<script defer src="//play.pokemonshowdown.com/js/battle.js?0.1639197660866617"></script>
 
-<script defer src="/js/utils.js?"></script>
-<script defer src="/js/replays-battle.js?"></script>
-<script defer src="/js/replays-index.js?"></script>
+<script defer src="/js/utils.js?0.9656651009660407"></script>
+<script defer src="/js/replays-battle.js?0.026226144498368353"></script>
+<script defer src="/js/replays-index.js?0.5196472948972568"></script>
 
 <?php
 
@@ -294,4 +294,4 @@ if ($replay) {
 
 ?>
 
-<script defer src="/js/replays.js?"></script>
+<script defer src="/js/replays.js?0.41801701891054277"></script>

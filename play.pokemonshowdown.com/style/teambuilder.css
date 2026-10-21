@@ -203,7 +203,7 @@
 	height: 30px;
 }
 
-.teamlist, .teamdropdown {
+.teamlist {
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -511,6 +511,10 @@
 }
 
 /* setstats */
+
+.set-stats-form, .set-details-form {
+	font-size: 10pt;
+}
 
 .setdetails, .setstats {
 	display: block;
