@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+                      ,///////,
+      +#########+     ///////,
+   +###############+  ///////
+  +#################+,//////,
+ +###################,/////,
+ ########+   +########////
+                     ////,  PokemonShowdown.com
+ ########+   +########///
+ +###################+//
+  +#################+
+   +###############+
+      +#########+///////,
+                ///////,
+
+Viewing source? We're open source! Check us out on GitHub!
+https://github.com/smogon/pokemon-showdown
+https://github.com/smogon/pokemon-showdown-client (you are here)
+
+Also visit us in the Dev chatroom:
+https://psim.us/dev
+
+-->
+<meta charset="UTF-8" />
+<meta id="viewport" name="viewport" content="width=device-width" />
+<title>Showdown!</title>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<link rel="shortcut icon" href="//play.pokemonshowdown.com/favicon.ico" id="dynamic-favicon" />
+<link rel="icon" sizes="256x256" href="//play.pokemonshowdown.com/favicon-256.png" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/battle.css?0.6058258523800198" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/oldclient.css?0.7068004279518444" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/sim-types.css?0.38911107763743114" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/utilichart.css?0.6596011518120315" />
+<link rel="stylesheet" href="//play.pokemonshowdown.com/style/font-awesome.css?0.7705496614899938" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="/manifest.json" />
+<!--[if lte IE 8]><script>document.location.replace('http://pokemonshowdown.com/autodownload/win');</script><![endif]-->
+
+<!-- config/head-custom.html -->
+
+<div id="header" class="header">
+	<img class="logo" src="//play.pokemonshowdown.com/pokemonshowdownbeta.png" srcset="//play.pokemonshowdown.com/pokemonshowdownbeta@2x.png 2x" alt="Pok&eacute;mon Showdown! (beta)" width="146" height="44" /><div class="maintabbarbottom"></div>
+</div>
+<div class="ps-room scrollable" id="mainmenu"><div class="mainmenuwrapper">
+	<div class="leftmenu">
+		<div class="activitymenu">
+			<div class="pmbox">
+				<div class="pm-window news-embed" data-newsid="504">
+					<h3><button class="closebutton" tabindex="-1"><i class="fa fa-times-circle"></i></button><button class="minimizebutton" tabindex="-1"><i class="fa fa-minus-circle"></i></button>News</h3>
+					<div class="pm-log" style="max-height:none">
+						<div class="newsentry" data-newsid="504" data-date="1791216085"><h4>OMCL II</h4><p><a href="https://www.smogon.com/forums/threads/3789383/" target="_blank">Sign up for the second iteration of the OM Champions League</a> to play some of our popular monthly OM favorites as well as core staple OMs. The winning team will be awarded a Custom Avatar!</p><p>&mdash;<strong>Lillie</strong> <small class="date">on Oct 5, 2026</small></p></div><div class="newsentry" data-newsid="503" data-date="1790913826"><h4>Español Premier League &amp; Pet Mods Halloween Advent</h4><p><a href="https://www.smogon.com/forums/threads/espa%C3%B1ol-premier-league-v-informaci%C3%B3n-e-inscripciones-de-jugadores-%C2%A1premio-de-custom-avatar.3788913/" target="_blank">Player signups, for the Español Premier League Tournament V!</a> One of the biggest tournaments events hosted by the Hispanic community so far, demonstrate your competitive Pokemon skills in this team tournament.</p><p>Join <a href="https://play.pokemonshowdown.com/petmods" target="_blank">Pet Mods</a> throughout October for their <a href="https://www.smogon.com/forums/threads/pet-mods-halloween-calendar.3788834/#post-11142718" target="_blank">Halloween Calendar</a>. Every two days, you may submit a Pokemon to be added to the metagame! Will your creations make it onto PS!? You might even win a Custom Avatar...</p><p>&mdash;<strong>Lillie</strong> <small class="date">on Oct 1, 2026</small></p></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="mainmenu">
+			<div id="loading-message" class="mainmessage">Initializing... <noscript>FAILED<br /><br />Pok&eacute;mon Showdown requires JavaScript.</noscript></div>
+		</div>
+	</div>
+	<div class="rightmenu">
+	</div>
+	<div class="mainmenufooter">
+		<div class="bgcredit"></div>
+		<small>
+			<a href="//dex.pokemonshowdown.com/" target="_blank">Pok&eacute;dex</a> | <a href="//replay.pokemonshowdown.com/" target="_blank">Replays</a> | <a href="http://smogon.com/forums/" target="_blank">Forum</a> | <a href="//pokemonshowdown.com/rules" target="_blank">Rules</a> | <a href="//pokemonshowdown.com/credits" target="_blank">Credits</a> | <a href="//pokemonshowdown.com/privacy" target="_blank">Privacy</a>
+		</small>
+	</div>
+</div></div>
+<script>
+	var LM = document.getElementById('loading-message');
+	LM.innerHTML += ' DONE<br />Loading libraries...';
+</script>
+<script nomodule src="//play.pokemonshowdown.com/js/lib/ps-polyfill.js"></script>
+<script src="//play.pokemonshowdown.com/config/config.js?8ffd7f46"></script>
+<script src="//play.pokemonshowdown.com/js/lib/jquery-2.2.4.min.js"></script>
+<script src="//play.pokemonshowdown.com/js/lib/jquery-cookie.js"></script>
+<script src="//play.pokemonshowdown.com/js/lib/autoresize.jquery.min.js?0.9767091048149028"></script>
+<script src="//play.pokemonshowdown.com/js/battle-sound.js?0.6526306481705066"></script>
+<script src="//play.pokemonshowdown.com/js/lib/html-css-sanitizer-minified.js?0.8259938426475449"></script>
+<script src="//play.pokemonshowdown.com/js/lib/lodash.core.js?0.9586934452132514"></script>
+<script src="//play.pokemonshowdown.com/js/lib/backbone.js?0.6522158984720802"></script>
+<script src="//play.pokemonshowdown.com/js/lib/d3.v3.min.js"></script>
+
+<script>
+	LM.innerHTML += ' DONE<br />Loading data...';
+</script>
+
+<script src="//play.pokemonshowdown.com/js/battledata.js?0.11561445054338626"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/storage.js?0.17037934854091252"></script>
+<script src="//play.pokemonshowdown.com/data/pokedex-mini.js?0.3337208495571704"></script>
+<script src="//play.pokemonshowdown.com/data/typechart.js?0.32220699477937"></script>
+<script src="//play.pokemonshowdown.com/js/battle.js?0.0646238436922969"></script>
+<script src="//play.pokemonshowdown.com/js/lib/sockjs-1.4.0-nwjsfix.min.js"></script>
+<script src="//play.pokemonshowdown.com/js/lib/color-thief.min.js"></script>
+
+<script>
+	LM.innerHTML += ' DONE<br />Loading client...';
+</script>
+
+<script src="//play.pokemonshowdown.com/data/commands.js?0.03631464193463507"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client.js?0.5392312499677238"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-topbar.js?0.36901877691098783"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-mainmenu.js?0.7092392900446103"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-teambuilder.js?0.1166731073581907"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-ladder.js?0.8674504116053461"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-chat.js?0.2870727231248492"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-chat-tournament.js?0.5221455184650698"></script>
+<script src="//play.pokemonshowdown.com/js/battle-tooltips.js?0.7173791506511659"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-battle.js?0.742155142100308"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/client-rooms.js?0.6590736670818961"></script>
+<script src="//play.pokemonshowdown.com/data/graphics.js?0.2649568722423544"></script>
+
+<script>
+	// framebust - see https://owasp.org/www-pdf-archive/OWASP_AppSec_Research_2010_Busting_Frame_Busting_by_Rydstedt.pdf
+	// should be robust against reflective XSS filters and navigation interception
+	var app;
+	if (self === top) {
+		app = new App();
+	} else {
+		LM.innerHTML += ' IN FRAME<br />Please visit Showdown directly.';
+		top.location = self.location;
+	}
+</script>
+
+<script src="//play.pokemonshowdown.com/data/pokedex.js?0.596298867738857"></script>
+<script src="//play.pokemonshowdown.com/data/moves.js?0.32100397784598134"></script>
+<script src="//play.pokemonshowdown.com/data/items.js?0.16105996244192067"></script>
+<script src="//play.pokemonshowdown.com/data/abilities.js?0.032644325542077635"></script>
+
+<script src="//play.pokemonshowdown.com/data/search-index.js?0.9662658973783936"></script>
+<script src="//play.pokemonshowdown.com/data/teambuilder-tables.js?0.9889559755867263"></script>
+<script src="//play.pokemonshowdown.com/js/battle-dex-search.js?0.27525404655536223"></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/search.js?0.5586141591670588"></script>
+
+<script src="//play.pokemonshowdown.com/data/aliases.js?0.15906451726605764" async></script>
+<script src="//play.pokemonshowdown.com/js/oldclient/clean-cookies.php" async></script>
