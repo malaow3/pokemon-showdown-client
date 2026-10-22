@@ -83,12 +83,15 @@ jobs:
           set -o pipefail
           (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tail -n 40 > verify.log
 
-      - name: Push merge and trigger deploy
+      - name: Push conflict-free merge to server
+        if: steps.merge.outputs.ok == 'true'
+        run: git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Trigger deploy
         if: steps.merge.outputs.ok == 'true' && steps.verify.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
         run: |
-          git push origin "HEAD:$TARGET_BRANCH"
           # Pushes made with GITHUB_TOKEN don't trigger other workflows, so dispatch deploy explicitly.
           gh workflow run docker-deploy.yml --ref "$TARGET_BRANCH"
 
@@ -109,7 +112,7 @@ jobs:
             reason="Merge conflict merging \`upstream/$UPSTREAM_BRANCH\` (\`${UP_SHA:0:8}\`) into \`$TARGET_BRANCH\`."
             detail="Conflicted files:"$'\n'"$CONFLICTS"
           else
-            reason="Merge was clean but the build/tests **failed** for upstream \`${UP_SHA:0:8}\`. Nothing was pushed or deployed."
+            reason="Merge was clean but the build/tests **failed** for upstream \`${UP_SHA:0:8}\`. The merge was pushed to \`$TARGET_BRANCH\`, but not deployed."
             detail="$(tail -n 15 verify.log 2>/dev/null)"
           fi
           msg="$reason"$'\n'"\`\`\`"$'\n'"${detail:0:1200}"$'\n'"\`\`\`"$'\n'"$RUN_URL"

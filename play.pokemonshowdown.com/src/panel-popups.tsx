@@ -1759,11 +1759,6 @@ class BattleOptionsPanel extends PSRoomPanel {
 				}
 				break;
 			}
-			case 'allowbots': {
-				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, allowLadderBots: value });
-				PS.send(value ? `/noreply /allowbots` : `/noreply /blockbots`);
-				break;
-			}
 			case 'autosavereplay': {
 				PS.prefs.set('autosavereplay', value);
 				break;
@@ -1907,14 +1902,6 @@ class BattleOptionsPanel extends PSRoomPanel {
 					/> <abbr title={TL`You can still invite spectators by giving them the URL or using the /invite command`}>
 						{TL`Invite only (hide from Battles list)`}
 					</abbr>
-				</label>
-			</p>
-			<p>
-				<label class="checkbox">
-					<input
-						name="allowbots" checked={PS.prefs.serversettings.allowLadderBots || false}
-						type="checkbox" onChange={this.handleAllSettings}
-					/> {TL`Allow matching into bots`}
 				</label>
 			</p>
 			<p>
