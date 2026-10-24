@@ -81,10 +81,10 @@ jobs:
         if: steps.merge.outputs.ok == 'true'
         run: |
           set -o pipefail
-          (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tail -n 40 > verify.log
+          (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tee verify.log | tail -n 40
 
       - name: Push conflict-free merge to server
-        if: steps.merge.outputs.ok == 'true'
+        if: always() && steps.merge.outputs.ok == 'true'
         run: git push origin "HEAD:$TARGET_BRANCH"
 
       - name: Trigger deploy
