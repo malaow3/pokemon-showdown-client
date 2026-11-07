@@ -46,7 +46,7 @@ jobs:
       - name: Check whether we already alerted for this upstream commit
         if: steps.upstream.outputs.uptodate == 'false'
         id: seen
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .sync-notified
           key: sync-notified-${{ steps.upstream.outputs.sha }}
@@ -81,7 +81,7 @@ jobs:
         if: steps.merge.outputs.ok == 'true'
         run: |
           set -o pipefail
-          (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tee verify.log | tail -n 40
+          (npm ci && POKEBIN_HOST=pokebin.malaow3.com npm run build && npm run test) 2>&1 | tee verify.log
 
       - name: Push conflict-free merge to server
         if: always() && steps.merge.outputs.ok == 'true'
@@ -121,8 +121,10 @@ jobs:
           mkdir -p .sync-notified && echo "$UP_SHA" > .sync-notified/sha
 
       - name: Remember that we alerted for this upstream commit
-        if: always() && hashFiles('.sync-notified/sha') != ''
-        uses: actions/cache/save@v4
+        if: >-
+          always() && steps.seen.outputs.cache-hit != 'true' &&
+          hashFiles('.sync-notified/sha') != ''
+        uses: actions/cache/save@v5
         with:
           path: .sync-notified
           key: sync-notified-${{ steps.upstream.outputs.sha }}
