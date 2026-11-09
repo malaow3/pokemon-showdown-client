@@ -124,6 +124,24 @@ export default configure([
 		},
 	},
 	{
+		name: "PokeBin integration (modern browsers)",
+		files: [
+			'play.pokemonshowdown.com/src/pokebin-auth.ts',
+			'play.pokemonshowdown.com/src/battle-team-editor.tsx',
+		],
+		rules: {
+			// PokeBin already requires WebCrypto and WebAssembly. Allow its native
+			// fetch/async APIs while retaining the other upstream ES3 restrictions.
+			"no-restricted-globals": ["error", "Proxy", "Reflect", "Symbol", "WeakSet", "WeakMap", "Set", "Map"],
+			"no-restricted-syntax": ["error",
+				"YieldExpression", "BigIntLiteral",
+				{ selector: "MethodDefinition[kind='get']", message: "Getters cannot be compiled to ES3" },
+				{ selector: "Property[kind='get']", message: "Getters cannot be compiled to ES3" },
+				{ selector: "CallExpression[callee.name='Symbol']", message: "Annoying to serialize, just use a string" },
+			],
+		},
+	},
+	{
 		name: "TypeScript for Node",
 		files: ['build-tools/*.{ts,mts}'],
 		extends: [configs.ts],

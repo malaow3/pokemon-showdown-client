@@ -262,8 +262,8 @@ class PSPrefs extends PSStreamModel<string | null> {
 	}
 	save() {
 		switch (this.storageEngine) {
-			case 'localStorage':
-				localStorage.setItem('showdown_prefs', JSON.stringify(this.storage));
+		case 'localStorage':
+			localStorage.setItem('showdown_prefs', JSON.stringify(this.storage));
 		}
 	}
 	fixPrefs(newPrefs: any) {
@@ -1631,53 +1631,53 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 					targets[i] = targets[i].replace(/\n/g, '').trim();
 				}
 				switch (subCmd) {
-					case 'add': case 'roomadd': {
-						let key = subCmd === 'roomadd' ? (PS.server.id + '#' + this.id) : 'global';
-						let highlightList = highlights[key] || [];
-						for (let i = 0, len = targets.length; i < len; i++) {
-							if (!targets[i]) continue;
-							if (/[\\^$*+?()|{}[\]]/.test(targets[i])) {
-								// Catch any errors thrown by newly added regular expressions so they don't break the entire highlight list
-								try {
-									new RegExp(targets[i]);
-								} catch (e: any) {
-									return this.errorReply(
-										e.message.startsWith('Invalid regular expression: ') ?
-											e.message :
-											'Invalid regular expression: /' + targets[i] + '/: ' + e.message
-									);
-								}
-							}
-							if (highlightList.includes(targets[i])) {
-								return this.errorReply(`${targets[i]} is already on your highlights list.`);
+				case 'add': case 'roomadd': {
+					let key = subCmd === 'roomadd' ? (PS.server.id + '#' + this.id) : 'global';
+					let highlightList = highlights[key] || [];
+					for (let i = 0, len = targets.length; i < len; i++) {
+						if (!targets[i]) continue;
+						if (/[\\^$*+?()|{}[\]]/.test(targets[i])) {
+							// Catch any errors thrown by newly added regular expressions so they don't break the entire highlight list
+							try {
+								new RegExp(targets[i]);
+							} catch (e: any) {
+								return this.errorReply(
+									e.message.startsWith('Invalid regular expression: ') ?
+										e.message :
+										'Invalid regular expression: /' + targets[i] + '/: ' + e.message
+								);
 							}
 						}
-						highlights[key] = highlightList.concat(targets);
-						this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
-						// We update the regex
-						ChatRoom.updateHighlightRegExp(highlights);
-						break;
-					}
-					case 'delete': case 'roomdelete': {
-						let key = subCmd === 'roomdelete' ? (PS.server.id + '#' + this.id) : 'global';
-						let highlightList = highlights[key] || [];
-						let newHls: string[] = [];
-						for (let i = 0, len = highlightList.length; i < len; i++) {
-							if (!targets.includes(highlightList[i])) {
-								newHls.push(highlightList[i]);
-							}
+						if (highlightList.includes(targets[i])) {
+							return this.errorReply(`${targets[i]} is already on your highlights list.`);
 						}
-						highlights[key] = newHls;
-						this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
-						// We update the regex
-						ChatRoom.updateHighlightRegExp(highlights);
-						break;
 					}
-					default:
-						// Wrong command
-						this.errorReply('Invalid /highlight command.');
-						this.handleSend('/help highlight'); // show help
-						return;
+					highlights[key] = highlightList.concat(targets);
+					this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
+					// We update the regex
+					ChatRoom.updateHighlightRegExp(highlights);
+					break;
+				}
+				case 'delete': case 'roomdelete': {
+					let key = subCmd === 'roomdelete' ? (PS.server.id + '#' + this.id) : 'global';
+					let highlightList = highlights[key] || [];
+					let newHls: string[] = [];
+					for (let i = 0, len = highlightList.length; i < len; i++) {
+						if (!targets.includes(highlightList[i])) {
+							newHls.push(highlightList[i]);
+						}
+					}
+					highlights[key] = newHls;
+					this.add(`||Now highlighting on ${(key === 'global' ? "(everywhere): " : "(in " + key + "): ")} ${highlights[key].join(', ')}`);
+					// We update the regex
+					ChatRoom.updateHighlightRegExp(highlights);
+					break;
+				}
+				default:
+					// Wrong command
+					this.errorReply('Invalid /highlight command.');
+					this.handleSend('/help highlight'); // show help
+					return;
 				}
 				PS.prefs.set('highlights', highlights);
 			} else {
@@ -1712,112 +1712,112 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 		},
 		'h,help'(target) {
 			switch (toID(target)) {
-case 'chal':
-				case 'chall':
-				case 'challenge':
-					this.add('||/challenge - Open a prompt to challenge a user to a battle.');
-					this.add('||/challenge [user] - Challenge the user [user] to a battle.');
-					this.add('||/challenge [user], [format] - Challenge the user [user] to a battle in the specified [format].');
-					this.add('||/challenge [user], [format] @@@ [rules] - Challenge the user [user] to a battle with custom rules.');
-					this.add('||[rules] can be a comma-separated list of: [added rule], ![removed rule], -[banned thing], *[restricted thing], +[unbanned/unrestricted thing]');
-					this.add('||If used in the DMs of a user, no [user] parameter can be used and it will challenge that user.');
-					this.add('||/battlerules - Detailed information on what can go in [rules].');
-					return;
-				case 'accept':
-					this.add('||/accept - Accept a challenge if only one is pending.');
-					this.add('||/accept [user] - Accept a challenge from the specified user.');
-					return;
-				case 'reject':
-					this.add('||/reject - Reject a challenge if only one is pending.');
-					this.add('||/reject [user] - Reject a challenge from the specified user.');
-					return;
-				case 'user':
-				case 'open':
-					this.add('||/user [user] - Open a popup containing the user [user]\'s avatar, name, rank, and chatroom list.');
-					return;
-				case 'news':
-					this.add('||/news - Opens a popup containing the news.');
-					return;
-				case 'ignore':
-				case 'unignore':
-					this.add('||/ignore [user] - Ignore all messages from the user [user].');
-					this.add('||/unignore [user] - Remove the user [user] from your ignore list.');
-					this.add('||/ignorelist - List all the users that you currently ignore.');
-					this.add('||/clearignore - Remove all users on your ignore list.');
-					this.add('||Note that staff messages cannot be ignored.');
-					return;
-				case 'nick':
-					this.add('||/nick [new username] - Change your username.');
-					return;
-				case 'clear':
-					this.add('||/clear - Clear the room\'s chat log.');
-					return;
-				case 'showdebug':
-				case 'hidedebug':
-					this.add('||/showdebug - Receive debug messages from battle events.');
-					this.add('||/hidedebug - Ignore debug messages from battle events.');
-					return;
-				case 'showjoins':
-				case 'hidejoins':
-					this.add('||/showjoins [room] - Receive users\' join/leave messages.');
-					this.add('||/hidejoins [room] - Ignore users\' join/leave messages.');
-					this.add('||If no [room] is provided, changes the global setting.');
-					return;
-				case 'showbattles':
-				case 'hidebattles':
-					this.add('||/showbattles - Receive links to new battles in Lobby.');
-					this.add('||/hidebattles - Ignore links to new battles in Lobby.');
-					return;
-				case 'ffto':
-				case 'fastforwardto':
-					this.add('||/ffto [turn] - Skip to turn [turn] in the current battle.');
-					this.add('||/ffto +[turn] - Skip forward [turn] turns.');
-					this.add('||/ffto -[turn] - Skip backward [turn] turns.');
-					this.add('||/ffto 0 - Skip to the start of the battle.');
-					this.add('||/ffto end - Skip to the end of the battle.');
-					return;
-				case 'unpackhidden':
-				case 'packhidden':
-					this.add('||/unpackhidden - Suppress hiding locked or banned users\' chat messages after the fact.');
-					this.add('||/packhidden - Hide locked or banned users\' chat messages after the fact.');
-					this.add('||Hidden messages from a user can be restored by clicking the button underneath their lock/ban reason.');
-					return;
-				case 'timestamps':
-					this.add('||Set your timestamps preference:');
-					this.add('||/timestamps [all|lobby|pms], [minutes|seconds|off]');
-					this.add('||all - Change all timestamps preferences, lobby - Change only lobby chat preferences, pms - Change only PM preferences.');
-					this.add('||off - Set timestamps off, minutes - Show timestamps of the form [hh:mm], seconds - Show timestamps of the form [hh:mm:ss].');
-					return;
-				case 'highlight':
-				case 'hl':
-					this.add('||Set up highlights:');
-					this.add('||/highlight add [word 1], [word 2], [...] - Add the provided list of words to your highlight list.');
-					this.add('||/highlight roomadd [word 1], [word 2], [...] - Add the provided list of words to the highlight list of whichever room you used the command in.');
-					this.add('||/highlight list - List all words that currently highlight you.');
-					this.add('||/highlight roomlist - List all words that currently highlight you in whichever room you used the command in.');
-					this.add('||/highlight delete [word 1], [word 2], [...] - Delete the provided list of words from your entire highlight list.');
-					this.add('||/highlight roomdelete [word 1], [word 2], [...] - Delete the provided list of words from the highlight list of whichever room you used the command in.');
-					this.add('||/highlight clear - Clear your global highlight list.');
-					this.add('||/highlight roomclear - Clear the highlight list of whichever room you used the command in.');
-					this.add('||/highlight clearall - Clear your entire highlight list (all rooms and globally).');
-					return;
-				case 'rank':
-				case 'ranking':
-				case 'rating':
-				case 'ladder':
-					this.add('||/rank [user] - Shows all ladder ranks for the given [user].');
-					this.add('||/rank [user], [format] - Shows the rank of [user] in the given [format].');
-					this.add('||If no user is given, it defaults to the user of the command.');
-					return;
-				case 'afd':
-					this.add('||/afd full - Enable all April Fools\' Day jokes.');
-					this.add('||/afd sprites - Enable April Fools\' Day sprites.');
-					this.add('||/afd default - Set April Fools\' Day to default (full on April 1st, off otherwise).');
-					this.add('||/afd off - Disable April Fools\' Day jokes until the next refresh, and set /afd default.');
-					this.add('||/afd never - Disable April Fools\' Day jokes permanently.');
-					return;
-				default:
-					return true;
+			case 'chal':
+			case 'chall':
+			case 'challenge':
+				this.add('||/challenge - Open a prompt to challenge a user to a battle.');
+				this.add('||/challenge [user] - Challenge the user [user] to a battle.');
+				this.add('||/challenge [user], [format] - Challenge the user [user] to a battle in the specified [format].');
+				this.add('||/challenge [user], [format] @@@ [rules] - Challenge the user [user] to a battle with custom rules.');
+				this.add('||[rules] can be a comma-separated list of: [added rule], ![removed rule], -[banned thing], *[restricted thing], +[unbanned/unrestricted thing]');
+				this.add('||If used in the DMs of a user, no [user] parameter can be used and it will challenge that user.');
+				this.add('||/battlerules - Detailed information on what can go in [rules].');
+				return;
+			case 'accept':
+				this.add('||/accept - Accept a challenge if only one is pending.');
+				this.add('||/accept [user] - Accept a challenge from the specified user.');
+				return;
+			case 'reject':
+				this.add('||/reject - Reject a challenge if only one is pending.');
+				this.add('||/reject [user] - Reject a challenge from the specified user.');
+				return;
+			case 'user':
+			case 'open':
+				this.add('||/user [user] - Open a popup containing the user [user]\'s avatar, name, rank, and chatroom list.');
+				return;
+			case 'news':
+				this.add('||/news - Opens a popup containing the news.');
+				return;
+			case 'ignore':
+			case 'unignore':
+				this.add('||/ignore [user] - Ignore all messages from the user [user].');
+				this.add('||/unignore [user] - Remove the user [user] from your ignore list.');
+				this.add('||/ignorelist - List all the users that you currently ignore.');
+				this.add('||/clearignore - Remove all users on your ignore list.');
+				this.add('||Note that staff messages cannot be ignored.');
+				return;
+			case 'nick':
+				this.add('||/nick [new username] - Change your username.');
+				return;
+			case 'clear':
+				this.add('||/clear - Clear the room\'s chat log.');
+				return;
+			case 'showdebug':
+			case 'hidedebug':
+				this.add('||/showdebug - Receive debug messages from battle events.');
+				this.add('||/hidedebug - Ignore debug messages from battle events.');
+				return;
+			case 'showjoins':
+			case 'hidejoins':
+				this.add('||/showjoins [room] - Receive users\' join/leave messages.');
+				this.add('||/hidejoins [room] - Ignore users\' join/leave messages.');
+				this.add('||If no [room] is provided, changes the global setting.');
+				return;
+			case 'showbattles':
+			case 'hidebattles':
+				this.add('||/showbattles - Receive links to new battles in Lobby.');
+				this.add('||/hidebattles - Ignore links to new battles in Lobby.');
+				return;
+			case 'ffto':
+			case 'fastforwardto':
+				this.add('||/ffto [turn] - Skip to turn [turn] in the current battle.');
+				this.add('||/ffto +[turn] - Skip forward [turn] turns.');
+				this.add('||/ffto -[turn] - Skip backward [turn] turns.');
+				this.add('||/ffto 0 - Skip to the start of the battle.');
+				this.add('||/ffto end - Skip to the end of the battle.');
+				return;
+			case 'unpackhidden':
+			case 'packhidden':
+				this.add('||/unpackhidden - Suppress hiding locked or banned users\' chat messages after the fact.');
+				this.add('||/packhidden - Hide locked or banned users\' chat messages after the fact.');
+				this.add('||Hidden messages from a user can be restored by clicking the button underneath their lock/ban reason.');
+				return;
+			case 'timestamps':
+				this.add('||Set your timestamps preference:');
+				this.add('||/timestamps [all|lobby|pms], [minutes|seconds|off]');
+				this.add('||all - Change all timestamps preferences, lobby - Change only lobby chat preferences, pms - Change only PM preferences.');
+				this.add('||off - Set timestamps off, minutes - Show timestamps of the form [hh:mm], seconds - Show timestamps of the form [hh:mm:ss].');
+				return;
+			case 'highlight':
+			case 'hl':
+				this.add('||Set up highlights:');
+				this.add('||/highlight add [word 1], [word 2], [...] - Add the provided list of words to your highlight list.');
+				this.add('||/highlight roomadd [word 1], [word 2], [...] - Add the provided list of words to the highlight list of whichever room you used the command in.');
+				this.add('||/highlight list - List all words that currently highlight you.');
+				this.add('||/highlight roomlist - List all words that currently highlight you in whichever room you used the command in.');
+				this.add('||/highlight delete [word 1], [word 2], [...] - Delete the provided list of words from your entire highlight list.');
+				this.add('||/highlight roomdelete [word 1], [word 2], [...] - Delete the provided list of words from the highlight list of whichever room you used the command in.');
+				this.add('||/highlight clear - Clear your global highlight list.');
+				this.add('||/highlight roomclear - Clear the highlight list of whichever room you used the command in.');
+				this.add('||/highlight clearall - Clear your entire highlight list (all rooms and globally).');
+				return;
+			case 'rank':
+			case 'ranking':
+			case 'rating':
+			case 'ladder':
+				this.add('||/rank [user] - Shows all ladder ranks for the given [user].');
+				this.add('||/rank [user], [format] - Shows the rank of [user] in the given [format].');
+				this.add('||If no user is given, it defaults to the user of the command.');
+				return;
+			case 'afd':
+				this.add('||/afd full - Enable all April Fools\' Day jokes.');
+				this.add('||/afd sprites - Enable April Fools\' Day sprites.');
+				this.add('||/afd default - Set April Fools\' Day to default (full on April 1st, off otherwise).');
+				this.add('||/afd off - Disable April Fools\' Day jokes until the next refresh, and set /afd default.');
+				this.add('||/afd never - Disable April Fools\' Day jokes permanently.');
+				return;
+			default:
+				return true;
 			}
 		},
 		'autojoin,cmd,crq,query'() {
@@ -2123,8 +2123,8 @@ export const PS = new class extends PSModel {
 	 * they are until they're dropped.
 	 */
 	dragging: { type: 'room', roomid: RoomID, foreground?: boolean } |
-	{ type: 'team', team: Team | number, folder: string | null } |
-	{ type: '?' } | // browser preventing us from knowing what's being dragged
+		{ type: 'team', team: Team | number, folder: string | null } |
+		{ type: '?' } | // browser preventing us from knowing what's being dragged
 		null = null;
 	lastMessageTime = '';
 
@@ -2347,7 +2347,7 @@ export const PS = new class extends PSModel {
 		for (const line of msg.split('\n')) {
 			const args = BattleTextParser.parseLine(line);
 			switch (args[0]) {
-case 'init': {
+			case 'init': {
 				isInit = true;
 				room = PS.rooms[roomid2];
 				const [, type] = args;
@@ -2977,23 +2977,23 @@ case 'init': {
 
 		room.location = location;
 		switch (location) {
-case 'left':
-				this.leftRoomList.splice(Math.max(index ?? Infinity, 1), 0, room.id);
-				break;
-			case 'right':
-				this.rightRoomList.splice(Math.min(index ?? -1, this.rightRoomList.length - 1), 0, room.id);
-				break;
-			case 'mini-window':
-				this.miniRoomList.splice(index ?? 0, 0, room.id);
-				break;
-			case 'popup':
-			case 'modal-popup':
-				// moving a room to a popup must move it to the topmost popup
-				this.popups.push(room.id);
-				this.room = room; // popups can't be backgrounded
-				break;
-			default:
-				throw new Error(`Invalid room location: ${location satisfies never as string}`);
+		case 'left':
+			this.leftRoomList.splice(Math.max(index ?? Infinity, 1), 0, room.id);
+			break;
+		case 'right':
+			this.rightRoomList.splice(Math.min(index ?? -1, this.rightRoomList.length - 1), 0, room.id);
+			break;
+		case 'mini-window':
+			this.miniRoomList.splice(index ?? 0, 0, room.id);
+			break;
+		case 'popup':
+		case 'modal-popup':
+			// moving a room to a popup must move it to the topmost popup
+			this.popups.push(room.id);
+			this.room = room; // popups can't be backgrounded
+			break;
+		default:
+			throw new Error(`Invalid room location: ${location satisfies never as string}`);
 		}
 		if (!background) {
 			if (location === 'left') this.leftPanel = this.baseRoom = room;

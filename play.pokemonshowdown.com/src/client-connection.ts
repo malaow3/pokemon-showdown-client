@@ -466,7 +466,8 @@ export const PSLoginServer = new class {
 		if (Config.loginServerProxy) {
 			// Use custom proxy for login server requests (avoids CORS issues on third-party hosts)
 			// Use location.origin to avoid Net.defaultRoute prepending the wrong domain
-			const proxyBase = Config.loginServerProxy.startsWith('/') ? location.origin + Config.loginServerProxy : Config.loginServerProxy;
+			const proxyBase = Config.loginServerProxy.startsWith('/') ?
+				location.origin + Config.loginServerProxy : Config.loginServerProxy;
 			url = proxyBase + '?serverid=' + encodeURIComponent(PS.server.id);
 		} else {
 			url = '/~~' + PS.server.id + '/action.php';

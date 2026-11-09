@@ -395,7 +395,7 @@ export class BattleLog {
 			el.className = divClass;
 			el.innerHTML = `<div class="infobox"><details class="details"><summary>${TL`Open team sheet for ${side.name}`}</summary>${pokebinButtonHtml}<br />${exportedTeam}</details></div>`;
 
-			const pokebinBtn = el.querySelector('.pokebinOtsUpload') as HTMLButtonElement | null;
+			const pokebinBtn = el.querySelector('.pokebinOtsUpload');
 			pokebinBtn?.addEventListener('click', e => {
 				e.preventDefault();
 				const author = side.name;

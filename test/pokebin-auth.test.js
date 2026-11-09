@@ -14,15 +14,47 @@ function storage(initial = {}) {
 function response(status, json = {}) {
 	return {status, ok: status >= 200 && status < 300, json: async () => json, text: async () => JSON.stringify(json)};
 }
-function loadAuth(fetch, initial = {}) {
+function loadAuth(fetch, initial = {}, browser = {}) {
 	const context = vm.createContext({
 		location: {hostname: 'localhost', origin: 'http://localhost:4000'},
 		localStorage: storage(initial), sessionStorage: storage(),
 		fetch, console, navigator: {}, window: {},
 		setTimeout, clearTimeout, setInterval, clearInterval,
+		...browser,
 	});
 	vm.runInContext(fs.readFileSync(require.resolve('../play.pokemonshowdown.com/js/pokebin-auth.js'), 'utf8'), context);
 	return context;
+}
+function loginBrowser(fetch) {
+	let onMessage;
+	let ready;
+	const listening = new Promise(resolve => { ready = resolve; });
+	const auth = loadAuth(fetch, {}, {
+		crypto: require('crypto').webcrypto, TextEncoder, btoa, URLSearchParams,
+		console: {error() {}},
+		setTimeout: () => 1, clearTimeout() {}, setInterval: () => 2, clearInterval() {},
+		window: {
+			open: () => ({closed: false}),
+			addEventListener(type, handler) {
+				assert.equal(type, 'message');
+				onMessage = handler;
+				ready();
+			},
+			removeEventListener(type, handler) {
+				assert.equal(type, 'message');
+				assert.equal(handler, onMessage);
+			},
+		},
+	});
+	return {
+		auth, listening,
+		message(data = {}, origin = 'http://localhost:4000') {
+			return onMessage({origin, data: {
+				type: 'pokebin-auth-callback', code: 'auth-code',
+				state: auth.sessionStorage.getItem('pokebin_state'), ...data,
+			}});
+		},
+	};
 }
 function session(expired = true) {
 	return {
@@ -33,6 +65,54 @@ function session(expired = true) {
 	};
 }
 const renewed = {access_token: 'new-access', expires_in: 900, refresh_token: 'new-refresh', refresh_expires_in: 2592000};
+
+describe('PokeBin OAuth callback', () => {
+	it('uses a synchronous event handler and saves exchanged credentials', async () => {
+		const calls = [];
+		const browser = loginBrowser(async (url, options) => {
+			calls.push({url, options});
+			return response(200, renewed);
+		});
+		const signIn = browser.auth.connectPokebin();
+		await browser.listening;
+		assert.equal(browser.message(), undefined);
+		assert.equal(await signIn, 'new-access');
+		assert.equal(calls.length, 1);
+		const body = JSON.parse(calls[0].options.body);
+		assert.equal(body.code, 'auth-code');
+		assert.ok(body.code_verifier);
+		assert.equal(browser.auth.localStorage.getItem('pokebin_refresh_token'), 'new-refresh');
+		assert.equal(browser.auth.sessionStorage.getItem('pokebin_verifier'), null);
+	});
+	it('ignores callbacks with a different origin or state', async () => {
+		let exchanges = 0;
+		const browser = loginBrowser(async () => {
+			exchanges++;
+			return response(200, renewed);
+		});
+		const signIn = browser.auth.connectPokebin();
+		await browser.listening;
+		browser.message({}, 'https://untrusted.example');
+		browser.message({state: 'wrong-state'});
+		assert.equal(exchanges, 0);
+		browser.message();
+		assert.equal(await signIn, 'new-access');
+		assert.equal(exchanges, 1);
+	});
+	for (const failure of ['network', 'server']) {
+		it(`resolves a ${failure} exchange failure without rejecting the event handler`, async () => {
+			const browser = loginBrowser(async () => {
+				if (failure === 'network') throw new Error('offline');
+				return response(503);
+			});
+			const signIn = browser.auth.connectPokebin();
+			await browser.listening;
+			assert.equal(browser.message(), undefined);
+			assert.equal(await signIn, null);
+			assert.equal(browser.auth.isPokebinLoggedIn(), false);
+		});
+	}
+});
 
 describe('PokeBin refresh authentication', () => {
 	it('keeps an expired access session connected when it can renew', () => {

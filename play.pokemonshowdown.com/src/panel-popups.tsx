@@ -674,16 +674,16 @@ class OptionsPanel extends PSRoomPanel {
 	setLayout = (e: Event) => {
 		const layout = (e.currentTarget as HTMLSelectElement).value;
 		switch (layout) {
-			case '':
-				PS.prefs.set('onepanel', null);
-				PS.rightPanel ||= PS.rooms['rooms'] || null;
-				break;
-			case 'onepanel':
-				PS.prefs.set('onepanel', true);
-				break;
-			case 'vertical':
-				PS.prefs.set('onepanel', 'vertical');
-				break;
+		case '':
+			PS.prefs.set('onepanel', null);
+			PS.rightPanel ||= PS.rooms['rooms'] || null;
+			break;
+		case 'onepanel':
+			PS.prefs.set('onepanel', true);
+			break;
+		case 'vertical':
+			PS.prefs.set('onepanel', 'vertical');
+			break;
 		}
 		PS.update();
 	};
@@ -706,50 +706,54 @@ class OptionsPanel extends PSRoomPanel {
 		let setting = elem.name;
 		let value = elem.checked;
 		switch (setting) {
-			case 'blockPMs': {
-				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockPMs: value });
-				PS.send(value ? '/blockpms' : '/unblockpms');
-				break;
-			}
-			case 'blockChallenges': {
-				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockChallenges: value });
-				PS.send(value ? '/blockchallenges' : '/unblockchallenges');
-				break;
-			}
-			case 'bwgfx': {
-				PS.prefs.set('bwgfx', value);
-				Dex.loadSpriteData(value || PS.prefs.noanim ? 'bw' : 'xy');
-				break;
-			}
-			case 'language': {
-				PS.prefs.set('serversettings', { ...PS.prefs.serversettings, language: elem.value || undefined });
-				void Dex.loadTextData().then(() => PS.updateTranslatedText());
-				PS.send(`/language ${Dex.text.findLanguage(Dex.text.getLanguage())?.legacyId || 'english'}`);
-				break;
-			}
-			case 'tournaments': {
-				PS.prefs.set(setting, elem.value as 'hide' | 'notify' | 'nonotify');
-				break;
-			}
-			case 'refreshprompt':
-			case 'noanim':
-			case 'nopastgens':
-			case 'noselfhighlight':
-			case 'leavePopupRoom':
-			case 'inchatpm':
-			case 'customtheme':
-				PS.prefs.set(setting, value);
-				break;
+		case 'blockPMs': {
+			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockPMs: value });
+			PS.send(value ? '/blockpms' : '/unblockpms');
+			break;
+		}
+		case 'blockChallenges': {
+			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, blockChallenges: value });
+			PS.send(value ? '/blockchallenges' : '/unblockchallenges');
+			break;
+		}
+		case 'bwgfx': {
+			PS.prefs.set('bwgfx', value);
+			Dex.loadSpriteData(value || PS.prefs.noanim ? 'bw' : 'xy');
+			break;
+		}
+		case 'language': {
+			PS.prefs.set('serversettings', { ...PS.prefs.serversettings, language: elem.value || undefined });
+			void Dex.loadTextData().then(() => PS.updateTranslatedText());
+			PS.send(`/language ${Dex.text.findLanguage(Dex.text.getLanguage())?.legacyId || 'english'}`);
+			break;
+		}
+		case 'tournaments': {
+			PS.prefs.set(setting, elem.value as 'hide' | 'notify' | 'nonotify');
+			break;
+		}
+		case 'refreshprompt':
+		case 'noanim':
+		case 'nopastgens':
+		case 'noselfhighlight':
+		case 'leavePopupRoom':
+		case 'inchatpm':
+		case 'customtheme':
+			PS.prefs.set(setting, value);
+			break;
 		}
 	};
 
-	connectPokeBin = async () => {
-		const token = await connectPokebin();
-		if (token) {
-			this.setState({ pokebinConnected: true });
-		} else {
-			PS.alert('PokeBin connection was cancelled or failed.');
-		}
+	connectPokeBin = () => {
+		void connectPokebin().then(token => {
+			if (token) {
+				this.setState({ pokebinConnected: true });
+			} else {
+				PS.alert('PokeBin connection was cancelled or failed.');
+			}
+		}).catch(error => {
+			console.error(error);
+			PS.alert('PokeBin connection failed. Please try again.');
+		});
 	};
 	disconnectPokeBin = () => {
 		clearPokebinAuth();
@@ -1752,53 +1756,53 @@ class BattleOptionsPanel extends PSRoomPanel {
 		const room = this.getBattleRoom();
 
 		switch (setting) {
-			case 'autotimer': {
-				PS.prefs.set('autotimer', value);
-				if (value) {
-					room?.send('/timer on');
-				}
-				break;
+		case 'autotimer': {
+			PS.prefs.set('autotimer', value);
+			if (value) {
+				room?.send('/timer on');
 			}
-			case 'autosavereplay': {
-				PS.prefs.set('autosavereplay', value);
-				break;
+			break;
+		}
+		case 'autosavereplay': {
+			PS.prefs.set('autosavereplay', value);
+			break;
+		}
+		case 'autohardcore': {
+			PS.prefs.set('autohardcore', value);
+			if (room?.battle) {
+				room.battle.setHardcoreMode(value);
+				room.update(null);
 			}
-			case 'autohardcore': {
-				PS.prefs.set('autohardcore', value);
-				if (room?.battle) {
-					room.battle.setHardcoreMode(value);
-					room.update(null);
-				}
-				break;
-			}
-			case 'spectatefromstart': {
-				PS.prefs.set('spectatefromstart', value);
-				break;
-			}
-			case 'ignoreopp': {
-				PS.prefs.set('ignoreopp', value);
-				this.handleIgnoreOpponent(value);
-				break;
-			}
-			case 'ignorespects': {
-				PS.prefs.set('ignorespects', value);
-				this.handleIgnoreSpectators(value);
-				break;
-			}
-			case 'ignorenicks': {
-				PS.prefs.set('ignorenicks', value);
-				this.handleIgnoreNicks(value);
-				break;
-			}
-			case 'rightpanel': {
-				PS.prefs.set('rightpanelbattles', value);
-				break;
-			}
-			case 'disallowspectators': {
-				PS.prefs.set('disallowspectators', value);
-				PS.mainmenu.disallowSpectators = value;
-				break;
-			}
+			break;
+		}
+		case 'spectatefromstart': {
+			PS.prefs.set('spectatefromstart', value);
+			break;
+		}
+		case 'ignoreopp': {
+			PS.prefs.set('ignoreopp', value);
+			this.handleIgnoreOpponent(value);
+			break;
+		}
+		case 'ignorespects': {
+			PS.prefs.set('ignorespects', value);
+			this.handleIgnoreSpectators(value);
+			break;
+		}
+		case 'ignorenicks': {
+			PS.prefs.set('ignorenicks', value);
+			this.handleIgnoreNicks(value);
+			break;
+		}
+		case 'rightpanel': {
+			PS.prefs.set('rightpanelbattles', value);
+			break;
+		}
+		case 'disallowspectators': {
+			PS.prefs.set('disallowspectators', value);
+			PS.mainmenu.disallowSpectators = value;
+			break;
+		}
 		}
 	};
 	handleBattleLayout = (ev: Event) => {

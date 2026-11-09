@@ -61,7 +61,6 @@
 		script.setAttribute('data-ext-id', 'native');
 		script.onerror = function () {
 			started = false;
-			// eslint-disable-next-line no-console
 			console.error('[showdex] Failed to load ' + SRC);
 		};
 		document.body.appendChild(script);

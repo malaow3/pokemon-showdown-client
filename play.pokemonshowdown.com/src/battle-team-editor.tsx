@@ -17,13 +17,14 @@ import { BattleStatGuesser, BattleStatOptimizer, BattleTooltips } from "./battle
 import { PSModel } from "./client-core";
 import { Net, PSLoginServer } from "./client-connection";
 import { PSIcon, PSView } from "./panels";
+import type { PokebinOwnedPaste } from './pokebin-auth';
 // PokeBin auth helpers are loaded globally via js/pokebin-auth.js (see index-new.html)
 declare function isPokebinLoggedIn(): boolean;
 declare function connectPokebin(): Promise<string | null>;
 declare function clearPokebinAuth(): void;
 declare function uploadPokebinAuthenticated(encodedData: string, visibility?: string): Promise<string | null>;
 declare function getPokebinBase(): string;
-declare function getPokebinOwnedPastes(): Promise<{ uuid: string; visibility: string; created_at: string; title: string | null; format: string | null }[]>;
+declare function getPokebinOwnedPastes(): Promise<PokebinOwnedPaste[]>;
 declare function getPokebinPaste(uuid: string): Promise<any>;
 
 // Pokebin WASM decryption support
@@ -1295,7 +1296,7 @@ class TeamTextbox extends preact.Component<{
 }> {
 	override state = {
 		copyButtonUsed: undefined as number | undefined,
-		pokebinPastes: [] as { uuid: string; visibility: string; created_at: string; title: string | null; format: string | null }[],
+		pokebinPastes: [] as PokebinOwnedPaste[],
 		pokebinSelection: '',
 		pokebinError: '',
 		pokebinLoading: false,
@@ -1452,7 +1453,7 @@ class TeamTextbox extends preact.Component<{
 		const value = this.textbox.value.slice(lineStart, current);
 
 		const pokebinMatch = /^https?:\/\/([^/]+)\/([a-z0-9]+)(?:\/.*)?$/.exec(value);
-		const pokebin = pokebinMatch && pokebinMatch[1] === new URL(getPokebinBase()).host ? pokebinMatch[2] : undefined;
+		const pokebin = pokebinMatch?.[1] === new URL(getPokebinBase()).host ? pokebinMatch[2] : undefined;
 		if (pokebin) {
 			this.editor.fetching = true;
 			Net(`${getPokebinBase()}/${pokebin}/json`).get().then(json => {
@@ -2213,16 +2214,20 @@ class TeamTextbox extends preact.Component<{
 		return <div class="team-pad">
 			<p>
 				<label>
-					<input type="checkbox" checked={this.OTS_export} onChange={e => {
-						this.OTS_export = (e.target as HTMLInputElement).checked;
-						this.forceUpdate();
-					}} /> OTS
+					<input
+						type="checkbox" checked={this.OTS_export} onChange={e => {
+							this.OTS_export = (e.target as HTMLInputElement).checked;
+							this.forceUpdate();
+						}}
+					/> OTS
 				</label>
 				<label style="margin-left: 20px">
-					<input type="checkbox" checked={this.removeAuthor} onChange={e => {
-						this.removeAuthor = (e.target as HTMLInputElement).checked;
-						this.forceUpdate();
-					}} /> Remove author
+					<input
+						type="checkbox" checked={this.removeAuthor} onChange={e => {
+							this.removeAuthor = (e.target as HTMLInputElement).checked;
+							this.forceUpdate();
+						}}
+					/> Remove author
 				</label>
 				<label style="margin-left: 20px">
 					Password {}
@@ -2236,11 +2241,17 @@ class TeamTextbox extends preact.Component<{
 						placeholder="Optional"
 					/>
 				</label>
-				<button style="margin-left: 20px" class="button" onClick={this.uploadToPokebin}>
+				<button style="margin-left: 20px" class="button" onClick={() => void this.uploadToPokebin()}>
 					Upload to PokeBin
 				</button>
 				{this.pokebinConnected && <label style="margin-left: 10px">
-					<select class="button" style="padding: 2px 6px" value={this.pokebinVisibility} onChange={e => { this.pokebinVisibility = (e.target as HTMLSelectElement).value as any; this.forceUpdate(); }}>
+					<select
+						class="button" style="padding: 2px 6px" value={this.pokebinVisibility}
+						onChange={e => {
+							this.pokebinVisibility = (e.target as HTMLSelectElement).value as 'private' | 'public';
+							this.forceUpdate();
+						}}
+					>
 						<option value="private">Private</option>
 						<option value="public">Public</option>
 					</select>
@@ -2350,21 +2361,34 @@ class TeamTextbox extends preact.Component<{
 					)
 				)}
 			</div>
-			{this.state.pokebinModal && <div class="ps-overlay" role="dialog" aria-modal="true" onClick={e => { if (e.target === e.currentTarget) this.setState({ pokebinModal: false }); }}>
+			{this.state.pokebinModal && <div
+				class="ps-overlay" role="dialog" aria-modal="true" onClick={e => {
+					if (e.target === e.currentTarget) this.setState({ pokebinModal: false });
+				}}
+			>
 				<div class="ps-popup" style="max-width: 600px; padding: 12px">
 					<h2>Import a team from PokeBin</h2>
 					<div style="max-height: 45vh; overflow-y: auto">
-						{this.state.pokebinPastes.map(paste => <button class="button" style="display:block;width:100%;text-align:left;margin:4px 0" onClick={() => void this.previewPokebinPaste(paste.uuid)}>
+						{this.state.pokebinPastes.map(paste => <button
+							class="button" style="display:block;width:100%;text-align:left;margin:4px 0"
+							onClick={() => void this.previewPokebinPaste(paste.uuid)}
+						>
 							<strong>{paste.title || paste.uuid}</strong> — {paste.visibility} {paste.format && `— ${paste.format}`}<br />
 							<small>{new Date(paste.created_at).toLocaleString()} · {paste.uuid}</small>
 						</button>)}
 					</div>
-					{this.state.pokebinPreviewLoading ? <p>Loading team preview…</p> : this.state.pokebinPreview.length ? <div class="infobox">
-						<strong>Team preview</strong>
-						{this.state.pokebinPreview.map(set => <p><PSIcon pokemon={set.species} /> {set.name || set.species} — {set.moves.join(' / ')}</p>)}
-					</div> : <p>Select a paste to preview. Password-protected teams show their title and metadata here.</p>}
+					{this.state.pokebinPreviewLoading ? <p>Loading team preview…</p> : this.state.pokebinPreview.length ? (
+						<div class="infobox">
+							<strong>Team preview</strong>
+							{this.state.pokebinPreview.map(set => <p>
+								<PSIcon pokemon={set.species} /> {set.name || set.species} — {set.moves.join(' / ')}
+							</p>)}
+						</div>
+					) : <p>Select a paste to preview. Password-protected teams show their title and metadata here.</p>}
 					{this.state.pokebinError && <p class="message-error">{this.state.pokebinError}</p>}
-					<button class="button" onClick={() => void this.importPokebinPaste()} disabled={!this.state.pokebinSelection}>Import selected team</button> {}
+					<button
+						class="button" onClick={() => void this.importPokebinPaste()} disabled={!this.state.pokebinSelection}
+					>Import selected team</button> {}
 					<button class="button" onClick={() => this.setState({ pokebinModal: false })}>Cancel</button>
 				</div>
 			</div>}
@@ -2381,13 +2405,15 @@ class TeamTextbox extends preact.Component<{
 		}
 	};
 	loadedPokebinPaste: { uuid: string, paste: any } | null = null;
-	getPokebinPasteData = async (uuid: string): Promise<any | null> => {
+	getPokebinPasteData = async (uuid: string): Promise<any> => {
 		if (this.loadedPokebinPaste?.uuid === uuid) return this.loadedPokebinPaste.paste;
 		const response = await getPokebinPaste(uuid);
 		const unpacked = unpackPokebinPaste(response);
 		let paste = unpacked.payload;
 		if (unpacked.encrypted) {
-			const password = await PS.prompt('Enter password for encrypted PokeBin team:', { type: 'password', okButton: 'Decrypt' });
+			const password = await PS.prompt('Enter password for encrypted PokeBin team:', {
+				type: 'password', okButton: 'Decrypt',
+			});
 			if (!password) return null;
 			const wasm = await loadPokebinWasm();
 			if (!wasm) throw new Error('Failed to load decryption module.');
@@ -2530,11 +2556,11 @@ class TeamEditorForm extends preact.Component<{
 		}
 	}
 	getSetScrollParent(elem: HTMLElement) {
-		for (let parent = elem.parentElement; parent; parent = parent.parentElement) {
+		let parent = elem.parentElement;
+		while (parent) {
 			const style = getComputedStyle(parent);
-			if (!/(auto|scroll)/.test(style.overflowY)) continue;
-			if (parent.scrollHeight <= parent.clientHeight) continue;
-			return parent;
+			if (/(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight) return parent;
+			parent = parent.parentElement;
 		}
 		return null;
 	}
@@ -3219,11 +3245,11 @@ class TeamEditorForm extends preact.Component<{
 		}
 	}
 	getScrollParent(elem: HTMLElement) {
-		for (let parent = elem.parentElement; parent; parent = parent.parentElement) {
+		let parent = elem.parentElement;
+		while (parent) {
 			const style = getComputedStyle(parent);
-			if (!/(auto|scroll)/.test(style.overflowY)) continue;
-			if (parent.scrollHeight <= parent.clientHeight) continue;
-			return parent;
+			if (/(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight) return parent;
+			parent = parent.parentElement;
 		}
 		return null;
 	}

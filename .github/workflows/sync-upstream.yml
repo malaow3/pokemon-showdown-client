@@ -73,7 +73,7 @@ jobs:
         if: steps.merge.outputs.ok == 'true'
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: npm
 
       - name: Verify merged result builds and passes tests

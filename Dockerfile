@@ -1,5 +1,5 @@
-# Build stage (the client build script requires Node.js >= 22.18)
-FROM node:22-bookworm-slim AS builder
+# Build stage (upstream requires Node.js >= 24.12.0)
+FROM node:24-bookworm-slim AS builder
 
 # Commit that produced this image; passed in by CI (--build-arg GIT_SHA=...)
 ARG GIT_SHA=unknown
