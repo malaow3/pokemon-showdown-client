@@ -142,6 +142,16 @@ describe('PokeBin refresh authentication', () => {
 		}, session(false));
 		assert.equal(await auth.uploadPokebinAuthenticated('payload'), 'paste');
 	});
+	it('uploads binary data with visibility and bearer authentication', async () => {
+		const auth = loadAuth(async (url, options) => {
+			assert.ok(url.endsWith('/api/pastes?visibility=public'));
+			assert.equal(options.headers.Authorization, 'Bearer old-access');
+			assert.equal(options.headers['Content-Type'], 'application/octet-stream');
+			assert.deepEqual([...new Uint8Array(await options.body.arrayBuffer())], [0, 255, 42]);
+			return response(201, {uuid: 'paste'});
+		}, session(false), {Blob, Uint8Array});
+		assert.equal(await auth.uploadPokebinAuthenticated(new Uint8Array([0, 255, 42]), 'public'), 'paste');
+	});
 	it('coalesces concurrent refresh requests', async () => {
 		let refreshes = 0;
 		const auth = loadAuth(async url => {

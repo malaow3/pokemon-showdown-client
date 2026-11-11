@@ -22,7 +22,9 @@ import type { PokebinOwnedPaste } from './pokebin-auth';
 declare function isPokebinLoggedIn(): boolean;
 declare function connectPokebin(): Promise<string | null>;
 declare function clearPokebinAuth(): void;
-declare function uploadPokebinAuthenticated(encodedData: string, visibility?: string): Promise<string | null>;
+declare function uploadPokebinAuthenticated(
+	encodedData: string | Uint8Array, visibility?: string
+): Promise<string | null>;
 declare function getPokebinBase(): string;
 declare function getPokebinOwnedPastes(): Promise<PokebinOwnedPaste[]>;
 declare function getPokebinPaste(uuid: string): Promise<any>;
@@ -37,6 +39,7 @@ interface PokebinWasmExports {
 	resetArena(): void;
 	getResultPtr(): number;
 	getResultLen(): number;
+	packPaste?(...args: number[]): boolean;
 }
 
 let pokebinWasm: PokebinWasmExports | null = null;
@@ -81,8 +84,10 @@ async function loadPokebinWasm(): Promise<PokebinWasmExports | null> {
 function pokebinDecrypt(encrypted: string, passphrase: string): string | null {
 	if (!pokebinWasm) return null;
 	const exports = pokebinWasm;
-	const passphraseLen = passphrase.length;
-	const encryptedLen = encrypted.length;
+	const passphraseBytes = new TextEncoder().encode(passphrase);
+	const encryptedBytes = new TextEncoder().encode(encrypted);
+	const passphraseLen = passphraseBytes.length;
+	const encryptedLen = encryptedBytes.length;
 
 	const bufferPtr = exports.allocUint8(passphraseLen + encryptedLen);
 	if (!bufferPtr) {
@@ -91,8 +96,6 @@ function pokebinDecrypt(encrypted: string, passphrase: string): string | null {
 	}
 
 	let memoryView = new Uint8Array(exports.memory.buffer);
-	const passphraseBytes = new TextEncoder().encode(passphrase);
-	const encryptedBytes = new TextEncoder().encode(encrypted);
 
 	for (let i = 0; i < passphraseLen; i++) {
 		memoryView[bufferPtr + i] = passphraseBytes[i];
@@ -123,8 +126,10 @@ function pokebinDecrypt(encrypted: string, passphrase: string): string | null {
 function pokebinEncrypt(message: string, passphrase: string): string | null {
 	if (!pokebinWasm) return null;
 	const exports = pokebinWasm;
-	const passphraseLen = passphrase.length;
-	const messageLen = message.length;
+	const passphraseBytes = new TextEncoder().encode(passphrase);
+	const messageBytes = new TextEncoder().encode(message);
+	const passphraseLen = passphraseBytes.length;
+	const messageLen = messageBytes.length;
 
 	const bufferPtr = exports.allocUint8(passphraseLen + messageLen);
 	if (!bufferPtr) {
@@ -133,8 +138,6 @@ function pokebinEncrypt(message: string, passphrase: string): string | null {
 	}
 
 	let memoryView = new Uint8Array(exports.memory.buffer);
-	const passphraseBytes = new TextEncoder().encode(passphrase);
-	const messageBytes = new TextEncoder().encode(message);
 
 	for (let i = 0; i < passphraseLen; i++) {
 		memoryView[bufferPtr + i] = passphraseBytes[i];
@@ -2149,7 +2152,28 @@ class TeamTextbox extends preact.Component<{
 		// If connected to PokeBin, use authenticated API so the paste is owned by the account.
 		if (this.pokebinConnected || isPokebinLoggedIn()) {
 			try {
-				const uuid = await uploadPokebinAuthenticated(encoded, this.pokebinVisibility);
+				let payload: string | Uint8Array = encoded;
+				if (!this.pokebinPassword) {
+					const wasm = await loadPokebinWasm();
+					if (wasm?.packPaste) {
+						const bytes = Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
+						const data = JSON.parse(new TextDecoder().decode(bytes)).data;
+						const args: number[] = [];
+						try {
+							for (const field of ['title', 'author', 'notes', 'format', 'rental', 'content']) {
+								const fieldBytes = new TextEncoder().encode(data[field]);
+								const ptr = wasm.allocUint8(Math.max(fieldBytes.length, 1));
+								new Uint8Array(wasm.memory.buffer, ptr, fieldBytes.length).set(fieldBytes);
+								args.push(ptr, fieldBytes.length);
+							}
+							if (!wasm.packPaste(...args, 0, 0, 0)) throw new Error('Failed to pack PokeBin paste');
+							payload = new Uint8Array(wasm.memory.buffer, wasm.getResultPtr(), wasm.getResultLen()).slice();
+						} finally {
+							wasm.resetArena();
+						}
+					}
+				}
+				const uuid = await uploadPokebinAuthenticated(payload, this.pokebinVisibility);
 				if (uuid) {
 					window.open(`${getPokebinBase()}/${uuid}`, '_blank');
 					return;

@@ -285,17 +285,20 @@ export async function connectPokebin(): Promise<string | null> {
 }
 
 export async function uploadPokebinAuthenticated(
-	encodedData: string, visibility: 'private' | 'public' = 'private'
+	encodedData: string | Uint8Array, visibility: 'private' | 'public' = 'private'
 ): Promise<string | null> {
 	let token = await renewPokebinAccessToken();
 	if (!token) return null;
-	const upload = (accessToken: string) => fetch(`${POKEBIN_BASE}/api/pastes`, {
+	const binary = typeof encodedData !== 'string';
+	const url = `${POKEBIN_BASE}/api/pastes${binary ? `?visibility=${visibility}` : ''}`;
+	const upload = (accessToken: string) => fetch(url, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
+			'Content-Type': binary ? 'application/octet-stream' : 'application/json',
 			'Authorization': `Bearer ${accessToken}`,
 		},
-		body: JSON.stringify({ data: encodedData, visibility }),
+		body: typeof encodedData === 'string' ? JSON.stringify({ data: encodedData, visibility }) :
+		new Blob([new Uint8Array(encodedData)]),
 	});
 	let res = await upload(token);
 	if (res.status === 401) {
