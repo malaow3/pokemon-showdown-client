@@ -1388,8 +1388,9 @@ export const actions: { [k: string]: QueryHandler } = {
 		}
 		const owner = toID(params.owner);
 		const bot = toID(params.bot);
-		if (!owner || !bot) {
-			throw new ActionError(`Missing 'owner' or 'bot' account name parameters.`);
+		const remove = !!toID(params.remove);
+		if (!bot) {
+			throw new ActionError(`Missing 'bot' account name parameters.`);
 		}
 		if (owner === bot) {
 			throw new ActionError(`Owner and bot must differ.`);
@@ -1398,22 +1399,32 @@ export const actions: { [k: string]: QueryHandler } = {
 		if (!botData) {
 			throw new ActionError(`Bot account '${bot}' does not exist.`);
 		}
-		if (botData.group === 10) {
+		// allow changing if owner is set on this req and they don't have an owner
+		if (!remove && botData.group === 10 && !(owner && !botData.account)) {
 			throw new ActionError(`User '${bot}' is already marked as a bot.`);
+		} else if (remove && botData.group !== 10) {
+			throw new ActionError(`User ${bot} is not marked as a bot.`);
+		} else if (remove && botData.account) {
+			throw new ActionError(
+				`User '${bot}' is confirmed through the bot registry. ` +
+				`Please ask an admin to undo this.`
+			);
 		}
-		const ownerData = await tables.users.get(owner);
-		if (!ownerData) {
-			throw new ActionError(`Owner account '${owner}' does not exist.`);
-		}
-		if (ownerData.account) {
-			throw new ActionError(`Bot accounts cannot be marked as owners of other bot accounts.`);
+		if (owner) {
+			const ownerData = await tables.users.get(owner);
+			if (!ownerData) {
+				throw new ActionError(`Owner account '${owner}' does not exist.`);
+			}
+			if (ownerData.account) {
+				throw new ActionError(`Bot accounts cannot be marked as owners of other bot accounts.`);
+			}
 		}
 		if (botData.group > 1 && botData.group < 10) {
 			throw new ActionError(`Cannot mark a staff account as a bot.`);
 		}
 		await tables.users.update(bot, {
-			account: owner,
-			group: 10,
+			account: owner || null,
+			group: remove ? 1 : 10,
 		});
 		return { success: true };
 	},
