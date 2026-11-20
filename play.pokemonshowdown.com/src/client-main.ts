@@ -1094,7 +1094,8 @@ export class PSRoom extends PSStreamModel<Args | null> implements RoomOptions {
 	 * * `'not-found'` = got `noinit` from the server
 	 */
 	connectMode: null | 'normal' | 'deleted' | 'not-found' | 'pending-reconnect' | 'pending-login' = null;
-	onParentKeyDown: ((e?: Event) => boolean | void) | null = null;
+	/** Receives keyboard events while this room is focused. Return false to prevent default. */
+	onParentKeyDown: ((ev: KeyboardEvent, isNonEmptyTextInput: boolean) => boolean | void) | null = null;
 
 	width = 0;
 	height = 0;
