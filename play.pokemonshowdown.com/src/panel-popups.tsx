@@ -6,7 +6,7 @@ import { PSLoginServer } from "./client-connection";
 import { PSBackground, PSFont } from "./client-core";
 import {
 	PS, PSRoom, Config, type PSRoomFocusOptions, type RoomOptions, type PSLoginState, type RoomID,
-	type TimestampOptions, type BattleLayoutPreference,
+	type TimestampOptions, type BattleLayoutPreference, VERTICAL_HEADER_WIDTH,
 } from "./client-main";
 import { type BattleRoom } from "./panel-battle";
 import { ChatUserList, PSTextarea, type ChatRoom } from "./panel-chat";
@@ -627,12 +627,18 @@ class OptionsPanel extends PSRoomPanel {
 		this.setState({ fontError: undefined });
 	};
 
+	handleResize = () => this.forceUpdate();
 	override componentDidMount() {
 		super.componentDidMount();
 		this.state = { pokebinConnected: isPokebinLoggedIn() };
+		window.addEventListener('resize', this.handleResize);
 		this.subscribeTo(PS.user);
 		PS.mainmenu.makeQuery('userdetails', PS.user.userid).then(() => this.forceUpdate());
 		this.loadAltLanguage();
+	}
+	override componentWillUnmount() {
+		window.removeEventListener('resize', this.handleResize);
+		super.componentWillUnmount();
 	}
 	loadedAltLanguage = '';
 	getAltLanguage() {
@@ -675,7 +681,8 @@ class OptionsPanel extends PSRoomPanel {
 		const layout = (e.currentTarget as HTMLSelectElement).value;
 		switch (layout) {
 		case '':
-			PS.prefs.set('onepanel', null);
+		case 'vertical-two-panel':
+			PS.prefs.set('onepanel', layout || null);
 			PS.rightPanel ||= PS.rooms['rooms'] || null;
 			break;
 		case 'onepanel':
@@ -769,6 +776,9 @@ class OptionsPanel extends PSRoomPanel {
 		const languageLabel = altLanguageLabel ? `${currentLanguageLabel} (${altLanguageLabel})` : currentLanguageLabel;
 		const singlePanel = TL`Single panel`;
 		const verticalTabs = TL`Vertical tabs`;
+		const showVerticalTwoPanel = PS.prefs.onepanel === 'vertical-two-panel' || !!PS.calculateLeftPanelWidth(
+			PS.layoutViewportWidth - VERTICAL_HEADER_WIDTH, PS.rightPanel || PS.rooms['rooms']
+		);
 		const automaticLanguage = Dex.text.findLanguage(Dex.text.getBrowserLanguage())?.name;
 		const defaultClient = /(?:^|;\s*)preactalpha=1(?:;|$)/.test(document.cookie) ? 'new' : 'old';
 		return <PSPanelWrapper room={room} width={380}><div class="pad">
@@ -861,6 +871,7 @@ class OptionsPanel extends PSRoomPanel {
 					</option>
 					<option value="onepanel">{singlePanel}</option>
 					<option value="vertical">{verticalTabs}</option>
+					{showVerticalTwoPanel && <option value="vertical-two-panel">{TL`Vertical tabs, two panels`}</option>}
 				</select></label>
 			</p>
 			<p>
@@ -1964,7 +1975,7 @@ class BattleOptionsPanel extends PSRoomPanel {
 					/> {TL`Start at turn 0 when spectating battles`}
 				</label>
 			</p>
-			{!PS.prefs.onepanel && window.innerWidth >= 800 && <p>
+			{(!PS.prefs.onepanel || PS.prefs.onepanel === 'vertical-two-panel') && window.innerWidth >= 800 && <p>
 				<label class="checkbox">
 					<input
 						name="rightpanel" checked={PS.prefs.rightpanelbattles || false}
