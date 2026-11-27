@@ -111,10 +111,9 @@
 				buf += '<p><label class="label">Team:</label>' + this.renderTeams() + '</p>';
 				buf += '<p><label class="label" name="partner" style="display:none">';
 				buf += 'Partner:<br />';
-				var settings = Storage.prefs('serversettings') || {};
 				buf += '<input class="partnerselect" /><button name="partnersubmit">Invite</button></label></p>';
 				buf += '<p><label class="checkbox"><input type="checkbox" name="private" ' + (Storage.prefs('disallowspectators') ? 'checked' : '') + ' /> <abbr title="You can still invite spectators by giving them the URL or using the /invite command">Don\'t allow spectators</abbr></label></p>';
-				buf += '<p><label class="checkbox"><input type="checkbox" name="allowbots" ' + (settings.allowLadderBots ? 'checked' : '') + ' /> <abbr>Allow matching into bots on the ladder</abbr></label></p>';
+				buf += '<p><label class="checkbox"><input type="checkbox" name="allowbots" ' + (Storage.prefs('allowLadderBots') ? 'checked' : '') + ' /> <abbr>Allow matching into bots on the ladder</abbr></label></p>';
 				buf += '<p><button class="button mainmenu1 big" name="search"><strong>Battle!</strong><br /><small>Find a random opponent</small></button></p></form></div>';
 			}
 
@@ -373,8 +372,9 @@
 		},
 
 		toggleBots: function (e) {
-			var settings = Storage.prefs('serversettings');
-			var value = !settings.allowLadderBots;
+			var value = e.currentTarget.checked;
+			Storage.prefs('allowLadderBots', value);
+			var settings = Storage.prefs('serversettings') || {};
 			settings.allowLadderBots = value;
 			Storage.prefs('serversettings', settings);
 			app.send(value ? '/noreply /allowbots' : '/noreply /blockbots');
@@ -1235,6 +1235,11 @@
 			var self = this;
 			app.sendTeam(team, function () {
 				self.searchDelay = setTimeout(function () {
+					var settings = Storage.prefs('serversettings') || {};
+					var allowBots = !!Storage.prefs('allowLadderBots');
+					if (settings.allowLadderBots !== undefined && settings.allowLadderBots !== allowBots) {
+						app.send(allowBots ? '/noreply /allowbots' : '/noreply /blockbots');
+					}
 					app.send(self.adjustPrivacy($privacyCheckbox.is(':checked')) + '/search ' + format);
 				}, 3000);
 			});

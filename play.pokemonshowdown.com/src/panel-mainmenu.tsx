@@ -110,6 +110,10 @@ export class MainMenuRoom extends PSRoom {
 		this.teamSent = search.format;
 		const privacy = this.adjustPrivacy();
 		PS.send(`/utm ${search.packedTeam}`);
+		const serverAllowsBots = PS.prefs.serversettings.allowLadderBots;
+		if (serverAllowsBots !== undefined && serverAllowsBots !== PS.prefs.allowLadderBots) {
+			PS.send(PS.prefs.allowLadderBots ? '/noreply /allowbots' : '/noreply /blockbots');
+		}
 		PS.send(`${privacy}/search ${search.format}`);
 	};
 	override handleLine(args: Args): boolean {
@@ -676,8 +680,8 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 		}
 	};
 	handleSearchPrefs = (ev: Event) => {
-		// const setting = (ev.currentTarget as HTMLInputElement).name;
 		const value = (ev.currentTarget as HTMLInputElement).checked;
+		PS.prefs.set('allowLadderBots', value);
 		PS.prefs.set('serversettings', { ...PS.prefs.serversettings, allowLadderBots: value });
 		PS.send(value ? `/noreply /allowbots` : `/noreply /blockbots`);
 	};
@@ -760,7 +764,7 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 			<p>
 				<label class="checkbox" title={TL`Battles against bots will be unrated.`}>
 					<input
-						name="allowbots" checked={PS.prefs.serversettings.allowLadderBots || false}
+						name="allowbots" checked={PS.prefs.allowLadderBots}
 						type="checkbox" onChange={this.handleSearchPrefs}
 					/> {TL`Allow matching into bots`}
 				</label>

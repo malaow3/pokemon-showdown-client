@@ -201,6 +201,7 @@ class PSPrefs extends PSStreamModel<string | null> {
 	newsid = 0;
 
 	avatar: string | null = null;
+	allowLadderBots = false;
 	serversettings: {
 		blockPMs?: boolean | string,
 		blockChallenges?: boolean,
